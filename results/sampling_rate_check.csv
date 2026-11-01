@@ -1,0 +1,6 @@
+file_number,label,rpm,n_samples,shaft_1x_hz,if_12k_expected_hz,if_12k_found_hz,if_12k_peak_ratio,if_48k_expected_hz,if_48k_found_hz,if_48k_peak_ratio,verdict,rate_in_config_hz,verdict_after_resampling
+225,ball 0.021 in 3 HP,1729.0,122136,28.817,28.817,28.788,95.9,7.204,7.074,1.4,12kHz,12000,not needed
+234,outer_race 0.021 in 0 HP,1796.0,122426,29.933,29.933,29.896,59.9,7.483,7.645,1.3,12kHz,12000,not needed
+235,outer_race 0.021 in 1 HP,1771.0,121991,29.517,29.517,29.51,58.9,7.379,7.476,0.8,12kHz,12000,not needed
+236,outer_race 0.021 in 2 HP,1748.0,122281,29.133,29.133,29.146,45.9,7.283,7.164,1.8,12kHz,12000,not needed
+237,outer_race 0.021 in 3 HP,1721.0,121991,28.683,28.683,28.625,35.5,7.171,7.082,1.3,12kHz,12000,not needed
