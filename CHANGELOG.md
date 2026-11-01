@@ -3,6 +3,46 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 2b (2026-11-01): 5 kHz low-pass on every signal
+
+Owner decision: low-pass every signal at about 5 kHz, to remove the
+recording-equipment difference between the normal and fault files.
+
+### Added / changed
+- `src/config.py`: low-pass spec. Flat below 4.8 kHz, at least 60 dB down
+  above 5.2 kHz per pass, so the cutoff sits at 5.0 kHz.
+- `src/load_data.py`:
+  - `lowpass_filter_taps()` designs the filter: 111 weights, Kaiser window;
+  - `lowpass()` runs it forwards and backwards, so there is no time shift;
+  - `load_signal()` now resamples **and** low-passes every signal.
+- `src/check_band_edge.py` (new): measures the resampling filter and the
+  low-pass filter, and every file's energy above 5.2 kHz before and after.
+  Writes two CSVs and `results/figures/band_edge.png`.
+- Tests: 53 (up from 46), all passing.
+  - New: the filter spec (flat passband, at least 120 dB stopband, no time
+    shift), and a check that all 40 real signals have less than −100 dB of
+    energy above 5.2 kHz.
+  - Switching the filter off makes 43 tests fail.
+- `CLAUDE.md`: new rule, **features use 0-4.8 kHz only**.
+  `docs/VALIDATION.md` v2.1 rewrites section 3.5. `docs/HOW_IT_WORKS.md`
+  updated.
+
+### Found
+- **Why 4.8 / 5.2 kHz.** Measured: scipy's resampling filter is flat
+  (within 0.2 dB) up to 5.2 kHz, and the 12 kHz recorder's filter starts
+  cutting at about 5.3 kHz. So the two recording chains differ only above
+  about 5.2 kHz.
+- **Before filtering, the gap was 59 dB** at 5.95 kHz: −67.5 dB for the
+  typical fault file against −8.9 dB for the typical normal file. That
+  was an easy shortcut for a classifier.
+- **After filtering, all 40 files have less than −130 dB of their energy
+  above 5.2 kHz.**
+- **A trace remains there.** The normal files still sit 10-15 dB above the
+  fault files, at around −110 dB, hence the 0-4.8 kHz rule for features.
+- **New:** the normal files share sharp tones at 4.1-4.3 kHz that no fault
+  file has. They sit inside the kept band, so they are a possible shortcut
+  that filtering cannot remove. Cause unknown.
+
 ## Session 2 (2026-11-01): all 40 files added, normal-file questions settled
 
 No models trained.
@@ -56,7 +96,7 @@ No models trained.
 ### Next steps
 1. Turn the envelope check into `src/check_fault_signatures.py`, with tests
    and a principled band choice.
-2. Owner decisions (see summary): low-pass all signals at about 5 kHz; how
+2. Owner decision (see summary): how
    to report ball and outer race 0.014 results.
 3. Read Smith & Randall (2015) in full.
 4. Write `README.md`.

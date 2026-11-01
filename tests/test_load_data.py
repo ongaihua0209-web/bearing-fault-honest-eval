@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import scipy.io
+import scipy.signal
 
 from src import config, load_data
 
@@ -167,6 +168,38 @@ class TestResampling(unittest.TestCase):
     def test_no_change_when_rates_match(self):
         x = np.arange(10.0)
         np.testing.assert_array_equal(load_data.resample_to_target(x, 12_000, 12_000), x)
+
+
+class TestLowpass(unittest.TestCase):
+    """The 5 kHz low-pass filter must meet the spec written in config.py."""
+
+    def setUp(self):
+        taps = load_data.lowpass_filter_taps()
+        freqs = np.linspace(0, 6000, 6001)
+        _, h = scipy.signal.freqz(taps, worN=freqs, fs=12_000)
+        self.freqs = freqs
+        # Applied forwards and backwards, so the dB effect doubles.
+        self.gain_db = 2 * 20 * np.log10(np.maximum(np.abs(h), 1e-15))
+
+    def test_passband_is_flat(self):
+        keep = self.freqs <= config.LOWPASS_PASSBAND_EDGE_HZ
+        self.assertLess(np.abs(self.gain_db[keep]).max(), 0.1)
+
+    def test_stopband_is_at_least_120_db_down(self):
+        cut = self.freqs >= config.LOWPASS_STOPBAND_EDGE_HZ
+        self.assertLess(self.gain_db[cut].max(), -120)
+
+    def test_low_frequency_sine_is_unchanged_and_not_delayed(self):
+        t = np.arange(12_000 * 2) / 12_000
+        x = np.sin(2 * np.pi * 1000 * t)
+        y = load_data.lowpass(x)
+        middle = slice(1000, -1000)                 # ignore the very ends
+        self.assertLess(np.abs(y[middle] - x[middle]).max(), 1e-3)
+
+    def test_high_frequency_sine_is_removed(self):
+        t = np.arange(12_000 * 2) / 12_000
+        y = load_data.lowpass(np.sin(2 * np.pi * 5500 * t))
+        self.assertLess(np.abs(y[1000:-1000]).max(), 1e-5)
 
 
 class TestRealFiles(unittest.TestCase):

@@ -43,7 +43,11 @@ every decision in plain English.
 - Every fixed fact (file list, labels, bearing geometry, nominal speeds,
   sampling rates, paths) lives in `src/config.py` and nowhere else.
 - Other code gets signals only through `load_data.load_signal()`. That
-  guarantees every signal arrives at 12 kHz.
+  guarantees every signal arrives at 12 kHz and low-pass filtered at 5 kHz
+  (flat to 4.8 kHz, at least 120 dB down above 5.2 kHz).
+- **Features use 0-4.8 kHz only.** Above that, the normal files still
+  differ from the fault files at around −110 dB because they were recorded
+  differently (docs/VALIDATION.md 3.5).
 - Files in `results/` are written by scripts. Never edit them by hand.
 - Report unexpected or negative findings in `docs/VALIDATION.md`. Do not
   hide them.
@@ -112,6 +116,8 @@ bearing-fault-honest-eval/
 │   ├── config.py                 all fixed facts: files, labels, geometry  [done]
 │   ├── load_data.py              load files, manifest, duplicate check     [done]
 │   ├── check_sampling_rate.py    12 vs 48 kHz check from the 1x peak      [done]
+│   ├── check_band_edge.py        proves the 5 kHz low-pass evens out
+│   │                             the band edge across classes            [done]
 │   ├── bearing_physics.py        fault frequencies from geometry           [done]
 │   ├── check_fault_signatures.py envelope spectrum: does each file show
 │   │                             its labelled fault frequency?             [planned]
@@ -120,7 +126,7 @@ bearing-fault-honest-eval/
 │   ├── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
 │   ├── splits.py                 leaky vs honest train/test splits         [planned]
 │   └── evaluate.py               train models, score, save results         [planned]
-├── tests/                        one test file per src module              [done for 4 modules]
+├── tests/                        one test file per src module              [done for 5 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
     ├── VALIDATION.md             evidence that each step is correct        [done, v2]
@@ -149,5 +155,6 @@ pip install -r requirements.txt
 python -m src.bearing_physics        # fault-frequency table
 python -m src.load_data              # manifest + data-quality report
 python -m src.check_sampling_rate    # sampling-rate check + plots
+python -m src.check_band_edge        # 5 kHz low-pass check + plot
 python -m unittest discover -s tests -v
 ```

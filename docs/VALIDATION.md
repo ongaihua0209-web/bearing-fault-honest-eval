@@ -1,4 +1,4 @@
-# Validation: version 2 (2026-11-01, all 40 files)
+# Validation: version 2.1 (2026-11-01, all 40 files)
 
 This document holds the evidence that each step of the project does what it
 claims. Every number here comes from a script in `src/` and is checked by a
@@ -8,7 +8,8 @@ test in `tests/`, except where a section says **exploratory**.
 - covers all 40 files (version 1 had 5);
 - settles the two normal-file questions;
 - adds a second test to the sampling-rate check (section 3.2);
-- extends the exploratory label check to every file (section 4).
+- extends the exploratory label check to every file (section 4);
+- v2.1 adds the 5 kHz low-pass, with its evidence (section 3.5).
 
 ---
 
@@ -235,21 +236,67 @@ peaks are gone and 1× is in the right place:
 - A test re-checks every signal that `load_signal()` hands out, and all 40
   come out 12 kHz.
 
-### 3.5 Remaining leakage risk (decision needed)
+### 3.5 Band-edge leakage, and the 5 kHz low-pass that removes it
 
-Even after resampling, **the normal class differs from every fault class in
-how it was recorded:**
-- a different sampling rate, so a different anti-aliasing filter shape
-  near the top of the band (5-6 kHz);
-- no BA channel;
-- a different file structure (97 is half length).
+Source: `python -m src.check_band_edge`, tested in `tests/test_band_edge.py`
+and `tests/test_load_data.py`.
 
-A classifier could use the 5-6 kHz band edge to separate "normal" from
-"fault" without learning anything about bearings.
+**The problem.** Even after resampling, the normal class was recorded
+differently from every fault class. Each group went through a different
+anti-aliasing filter, so they look different near the top of the band for
+reasons that have nothing to do with bearings. Measured:
 
-**Recommendation:** low-pass every signal at about 5 kHz before computing
-features, so every class has an identical top band. Treat any very high
-normal-vs-fault accuracy with suspicion.
+| Frequency | Resampling filter (normal files) | Typical fault file | Typical normal file |
+|---|---|---|---|
+| 4.8 kHz | −0.10 dB (flat) | −17.8 dB | −7.9 dB |
+| 5.2 kHz | −0.17 dB (flat) | −15.8 dB | −2.9 dB |
+| 5.5 kHz | −0.96 dB | −24.3 dB | −6.7 dB |
+| 5.8 kHz | −2.38 dB | −51.8 dB | −11.6 dB |
+| 5.95 kHz | −3.04 dB | **−67.5 dB** | **−8.9 dB** |
+
+How to read the table:
+- The resampling filter is measured by passing random noise through it.
+- The "typical" spectra are each group's median, in dB relative to its own
+  2-4 kHz level, so the table compares shapes, not loudness.
+- The 12 kHz recorder's filter cuts the fault files steeply from about
+  5.3 kHz. The normal files stay nearly flat up to 6 kHz.
+- At 5.95 kHz the gap is **59 dB**: a shortcut any classifier could find.
+
+**The fix (owner decision, 2026-11-01).** `load_data.load_signal()` now
+low-pass filters **every** signal:
+- it is a 111-weight FIR filter (Kaiser window), run forwards and backwards
+  so nothing is shifted in time;
+- it leaves 0-4.8 kHz unchanged (within 0.01 dB, measured);
+- it cuts everything above 5.2 kHz by at least 129 dB;
+- its −6 dB point (−12 dB after the two passes) is 5.0 kHz.
+
+Why these edges: below 5.2 kHz both recording chains are flat, so the
+filter removes only the region where they differ. The fault files' recorder
+starts cutting at about 5.3 kHz, and the resampling filter loses less than
+0.2 dB below 5.2 kHz.
+
+**Result.** Before the filter, the share of energy above 5.2 kHz was between
+−37 and −15 dB in the fault files and between −22 and −18 dB in the normal
+files. After it, **every one of the 40 files is below −130 dB**, less than
+1 part in 10 trillion. A test checks this for every file.
+
+![Band edge before and after the low-pass](../results/figures/band_edge.png)
+
+**What is left, and the rule that follows:**
+- **A trace remains above 5.2 kHz.** The normal files still sit about
+  10-15 dB above the fault files there, at around −110 dB. That is
+  negligible in absolute terms, but a feature that took the logarithm of
+  that band could still see it.
+  **Rule: features use 0-4.8 kHz only.**
+- **The normal files have their own tones inside the kept band.** They
+  share a cluster of sharp peaks at 4.1-4.3 kHz that the fault files do
+  not have (orange spikes in the figure). Their cause is unknown, and they
+  are another possible normal-vs-fault shortcut that filtering cannot
+  remove.
+- **Other differences remain.** The normal files have no BA channel (we
+  use DE only), and file 97 is half length.
+- Treat any very high normal-vs-fault accuracy with suspicion, and check
+  what the model relies on.
 
 ### 3.6 Limits of this check
 
@@ -353,6 +400,7 @@ are hard to find with envelope analysis (section 5).
 | Duplicate normal file | **resolved**: copy of 98 inside 99.mat, reported and not used |
 | Envelope label check as a tested script | exploratory only; next step |
 | Band choice for the envelope check (fixed 2-5 kHz vs data-driven) | to decide with the script |
-| Low-pass all signals at about 5 kHz to remove the 48 kHz band-edge difference | owner decision (section 3.5) |
+| Low-pass all signals at about 5 kHz to remove the 48 kHz band-edge difference | **done**: 4.8/5.2 kHz FIR in `load_signal()`, verified on all 40 files |
+| Normal-only tones at 4.1-4.3 kHz (possible shortcut inside the kept band) | unexplained; watch for it in feature importance |
 | Cause of the rig-wide 5.40× raw-spectrum peak | unexplained |
 | Read Smith & Randall (2015) in full | to do |

@@ -41,6 +41,23 @@ TARGET_SAMPLING_RATE_HZ = 12_000
 RECORDED_SAMPLING_RATE_OVERRIDES = {97: 48_000, 98: 48_000, 99: 48_000, 100: 48_000}
 
 # ---------------------------------------------------------------------------
+# Low-pass filter applied to EVERY signal by load_data.load_signal().
+#
+# Why: the normal files (recorded at 48 kHz, resampled) and the fault files
+# (recorded at 12 kHz) went through different anti-aliasing filters. Measured
+# with src/check_band_edge.py, the two recording chains agree below about
+# 5.2 kHz and differ above it. Removing everything above 5.2 kHz makes the
+# top of the band identical for every class, so a model cannot tell the
+# classes apart by HOW they were recorded. See docs/VALIDATION.md 3.5.
+#
+# The spec: below 4.8 kHz the signal passes unchanged; above 5.2 kHz it is
+# reduced at least 60 dB (1000x in amplitude). The -6 dB point is 5.0 kHz.
+# ---------------------------------------------------------------------------
+LOWPASS_PASSBAND_EDGE_HZ = 4_800
+LOWPASS_STOPBAND_EDGE_HZ = 5_200
+LOWPASS_STOPBAND_ATTENUATION_DB = 60
+
+# ---------------------------------------------------------------------------
 # Motor load (horsepower) -> nominal shaft speed (rpm).
 # Used only when a file does not store its own measured RPM.
 # ---------------------------------------------------------------------------
