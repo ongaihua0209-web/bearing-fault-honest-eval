@@ -182,10 +182,25 @@ class TestRealFiles(unittest.TestCase):
                 signal, rpm, fs = load_data.load_signal(r["file_number"])
                 self.assertEqual(signal.ndim, 1)
                 self.assertEqual(fs, 12_000)
-                self.assertGreater(signal.size, 12_000 * 5)    # > 5 seconds
+                # > 4 seconds (the shortest file, normal 97, is about 5 s)
+                self.assertGreater(signal.size, 12_000 * 4)
                 self.assertTrue(np.all(np.isfinite(signal)))
                 self.assertGreater(rpm, 1650)
                 self.assertLess(rpm, 1850)
+
+    def test_known_copy_inside_file_99_is_reported_not_used(self):
+        """
+        CWRU's 99.mat also contains X098_DE_time, an exact copy of 98.mat's
+        signal. It must be reported, and 99 must use its own X099 signal.
+        """
+        if not (load_data.mat_path(98).exists() and load_data.mat_path(99).exists()):
+            self.skipTest("files 98 and 99 not in data/raw/")
+        manifest, findings = load_data.build_manifest()
+        self.assertIn([(98, "X098_DE_time"), (99, "X098_DE_time")],
+                      findings["exact_duplicate_groups"])
+        row = manifest.set_index("file_number").loc[99]
+        self.assertEqual(row["de_variable"], "X099_DE_time")
+        self.assertEqual(row["status"], "ok")
 
 
 if __name__ == "__main__":

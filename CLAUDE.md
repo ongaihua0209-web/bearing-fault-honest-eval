@@ -74,14 +74,19 @@ every decision in plain English.
   are about 1797, 1772, 1750 and 1730 rpm.
 - The fault data is drive-end (DE) at 12 kHz. Use the DE channel.
 - Use each file's stored RPM where present, otherwise the nominal speed.
-- Sources disagree on whether the normal baseline is 12 kHz or 48 kHz.
-  `src/check_sampling_rate.py` checks this from the data.
-- One normal file reportedly contains a copy of another.
-  `src/load_data.py` checks this and excludes exact duplicates.
+  98 and 99 store no RPM.
+- **The normal files 97-100 were recorded at 48 kHz** (checked from the
+  data by `src/check_sampling_rate.py`). `load_signal()` resamples them to
+  12 kHz.
+- **99.mat also contains a copy of 98's signal** (`X098_DE_time`). The
+  loader uses `X099_DE_time` and reports the copy. No file is excluded.
 
-**Data status (2026-11-01):** only **5 of the 40** files are present: 225
-(ball, 0.021 in, 3 HP) and 234-237 (outer race, 0.021 in, 0-3 HP). No normal
-files are present yet. See `results/data_quality_report.txt`.
+**Data status (2026-11-01):** all **40 of 40** files are present and
+readable. Known issues and evidence are in `docs/VALIDATION.md`:
+- the normal class was recorded differently (48 kHz, no BA channel, 97 is
+  only 5 s long). That is a leakage risk;
+- an exploratory envelope check finds no clear labelled-fault signature in
+  the 12 ball files or the 4 outer-race 0.014 in files.
 
 ### Bearing
 
@@ -102,7 +107,7 @@ bearing-fault-honest-eval/
 ├── CHANGELOG.md                  what changed in each session              [done]
 ├── README.md                     portfolio-facing summary                  [planned]
 ├── requirements.txt              pinned library versions                   [done]
-├── data/raw/                     CWRU .mat files, e.g. 105.mat             [5 of 40]
+├── data/raw/                     CWRU .mat files, e.g. 105.mat             [40 of 40]
 ├── src/
 │   ├── config.py                 all fixed facts: files, labels, geometry  [done]
 │   ├── load_data.py              load files, manifest, duplicate check     [done]
@@ -118,8 +123,8 @@ bearing-fault-honest-eval/
 ├── tests/                        one test file per src module              [done for 4 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v1]
-    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v1]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v2]
+    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v2]
 ```
 
 ### Planned approach (subject to the owner's decisions)

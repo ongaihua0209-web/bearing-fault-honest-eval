@@ -8,26 +8,41 @@ instead of "this bearing is damaged" - a shortcut that inflates accuracy.
 
 The idea of the check:
   The shaft turns rpm/60 times per second, so a vibration spectrum almost
-  always has a peak at that frequency (called "1x"). A spectrum's frequency
-  axis is calculated FROM the sampling rate. If we read a file assuming
-  12 kHz but it was really recorded at 48 kHz, every frequency comes out
-  4 times too low: the 1x peak near 30 Hz would appear near 7.5 Hz.
-  So we look for the 1x peak in both places and see which one exists.
+  always has a peak at that frequency (called "1x"), and usually at 2x, 3x...
+  A spectrum's frequency axis is calculated FROM the sampling rate. Every
+  file is read here as if it were 12 kHz. If it was really recorded at
+  48 kHz, every frequency comes out 4 times too low, so the true 1x, 2x and
+  3x peaks land at 1/4, 1/2 and 3/4 of shaft speed.
 
-How "a peak exists" is decided:
-  Within +/-3% of the expected frequency we take the biggest value, and
-  divide it by the typical (median) level of the spectrum around it
-  (+/-30%). A real peak stands at least 10 times above its surroundings.
-  Exactly one candidate rate must pass; otherwise the verdict is
-  "inconclusive" and a person has to look at the plot.
+Two tests, read off one spectrum:
+  A. Is there a clear peak at 1x (shaft speed)?
+  B. How many of the "quarter orders" 0.25x, 0.50x and 0.75x show a clear
+     peak? A genuine 12 kHz recording has no physical reason to vibrate
+     at a quarter, half or three-quarters of shaft speed. A 48 kHz
+     recording read as 12 kHz does, because those are its true 1x, 2x, 3x.
+
+  Why test A alone is not enough: in a 48 kHz file read as 12 kHz, the
+  true 4x harmonic lands exactly on the 1x position. So a peak at 1x does
+  not prove 12 kHz. A peak at 0.25x, however, has no innocent explanation.
+
+Verdict:
+  12kHz        - clear 1x peak AND no quarter-order peaks
+  48kHz        - clear 0.25x peak AND at least 2 of the 3 quarter orders
+  inconclusive - anything else; a person must look at the plot
+
+"A clear peak": within +/-3% of the expected frequency, the largest value
+must be at least 10 times the typical (median) level of the spectrum
+around it (+/-30%).
 
 Run it AFTER src/load_data.py:
     python -m src.check_sampling_rate
 
 Outputs:
     results/sampling_rate_check.csv
-    results/figures/sampling_rate/<file>.png   (one plot per file)
-    results/figures/sampling_rate_overview.png  (all files on one page)
+    results/figures/sampling_rate/<file>.png        one plot per file
+    results/figures/sampling_rate/<file>_resampled_to_12k.png
+                                                    for files resampled
+    results/figures/sampling_rate_overview.png       all files on one page
 """
 
 import math
@@ -40,16 +55,22 @@ import pandas as pd
 
 from src import bearing_physics, config, load_data
 
-CANDIDATE_RATES_HZ = (12_000, 48_000)
 SEARCH_TOLERANCE = 0.03     # look for the peak within +/-3% of where it should be
 BACKGROUND_SPAN = 0.30      # compare it with the spectrum within +/-30%
 CLEAR_PEAK_RATIO = 10       # a real peak is at least 10x its background
+
+# Multiples of shaft speed we look at. 48 kHz / 12 kHz = 4, so a 48 kHz
+# file's true 1x, 2x, 3x appear at 1/4, 2/4, 3/4 when read as 12 kHz.
+QUARTER_ORDERS = (0.25, 0.50, 0.75)
+ORDERS_TO_TEST = QUARTER_ORDERS + (1.00,)
+QUARTER_PEAKS_NEEDED_FOR_48K = 2
+
 PLOT_MAX_HZ = 200
 
 # Chart colours (a colour-blind-checked palette) and neutral inks.
 COLOUR_SPECTRUM = "#2a78d6"   # blue
-COLOUR_IF_12K = "#eb6834"     # orange
-COLOUR_IF_48K = "#1baf7a"     # aqua
+COLOUR_1X = "#eb6834"         # orange
+COLOUR_QUARTERS = "#1baf7a"   # aqua
 COLOUR_REFERENCE = "#8a8984"  # grey, for theoretical fault frequencies
 INK = "#0b0b0b"
 INK_SECONDARY = "#52514e"
@@ -93,12 +114,7 @@ def peak_strength(frequencies, amplitudes, expected_hz):
 
 def check_signal(signal, rpm, assumed_fs=config.ASSUMED_SAMPLING_RATE_HZ):
     """
-    Test each candidate sampling rate for one signal.
-
-    The spectrum is always computed as if the file were at assumed_fs.
-    If the TRUE rate were true_fs, the 1x peak would appear at
-        (rpm / 60) * assumed_fs / true_fs
-    on that spectrum.
+    Run tests A and B (see top of file) on one signal, read at assumed_fs.
 
     Returns (result_dict, frequencies, amplitudes).
     """
@@ -106,18 +122,22 @@ def check_signal(signal, rpm, assumed_fs=config.ASSUMED_SAMPLING_RATE_HZ):
     shaft_hz = rpm / 60.0
     result = {"shaft_1x_hz": round(shaft_hz, 3)}
 
-    passed = []
-    for true_fs in CANDIDATE_RATES_HZ:
-        tag = f"{true_fs // 1000}k"
-        where_it_would_appear = shaft_hz * assumed_fs / true_fs
-        found_hz, ratio = peak_strength(frequencies, amplitudes, where_it_would_appear)
-        result[f"if_{tag}_expected_hz"] = round(where_it_would_appear, 3)
-        result[f"if_{tag}_found_hz"] = round(found_hz, 3)
-        result[f"if_{tag}_peak_ratio"] = round(ratio, 1)
-        if ratio >= CLEAR_PEAK_RATIO:
-            passed.append(tag)
+    is_clear = {}
+    for order in ORDERS_TO_TEST:
+        found_hz, ratio = peak_strength(frequencies, amplitudes, order * shaft_hz)
+        result[f"peak_hz_at_{order:.2f}x"] = round(found_hz, 3)
+        result[f"ratio_at_{order:.2f}x"] = round(ratio, 1)
+        is_clear[order] = ratio >= CLEAR_PEAK_RATIO
 
-    result["verdict"] = passed[0] + "Hz" if len(passed) == 1 else "inconclusive"
+    n_quarter_peaks = sum(is_clear[order] for order in QUARTER_ORDERS)
+    result["n_quarter_order_peaks"] = n_quarter_peaks
+
+    if is_clear[1.00] and n_quarter_peaks == 0:
+        result["verdict"] = "12kHz"
+    elif is_clear[0.25] and n_quarter_peaks >= QUARTER_PEAKS_NEEDED_FOR_48K:
+        result["verdict"] = "48kHz"
+    else:
+        result["verdict"] = "inconclusive"
     return result, frequencies, amplitudes
 
 
@@ -129,20 +149,22 @@ def verdict_for_rate(rate_hz):
 def _draw_spectrum(ax, frequencies, amplitudes, result, rpm, compact=False):
     """Draw one spectrum with the reference lines on a matplotlib axis."""
     show = (frequencies > 0) & (frequencies <= PLOT_MAX_HZ)
+    shaft_hz = result["shaft_1x_hz"]
     # zorder controls what is drawn on top: the spectrum (3) sits above the
     # reference lines (1), so a line never hides the peak it points at.
     ax.semilogy(frequencies[show], amplitudes[show], color=COLOUR_SPECTRUM,
                 linewidth=0.8, zorder=3, label="Spectrum, read as 12 kHz")
-    ax.axvline(result["if_12k_expected_hz"], color=COLOUR_IF_12K,
-               linestyle="--", linewidth=1.4, zorder=1,
-               label="1x if truly 12 kHz (rpm/60)")
-    ax.axvline(result["if_48k_expected_hz"], color=COLOUR_IF_48K,
-               linestyle="--", linewidth=1.4, zorder=1,
-               label="Where 1x would appear if truly 48 kHz")
+    ax.axvline(shaft_hz, color=COLOUR_1X, linestyle="--", linewidth=1.4,
+               zorder=1, label="1x shaft speed (rpm/60)")
+    for i, order in enumerate(QUARTER_ORDERS):
+        ax.axvline(order * shaft_hz, color=COLOUR_QUARTERS, linestyle="--",
+                   linewidth=1.2, zorder=1,
+                   label="0.25x / 0.5x / 0.75x: true 1x, 2x, 3x if really 48 kHz"
+                   if i == 0 else None)
 
     # Theoretical fault frequencies, as faint reference lines.
     fault_hz = bearing_physics.fault_frequencies_hz(rpm)
-    for name in ("FTF", "BPFO", "2xBSF", "BPFI"):
+    for name in ("BPFO", "2xBSF", "BPFI"):
         ax.axvline(fault_hz[name], color=COLOUR_REFERENCE, linestyle=":",
                    linewidth=0.9, zorder=1)
         if not compact:
@@ -158,13 +180,13 @@ def _draw_spectrum(ax, frequencies, amplitudes, result, rpm, compact=False):
         spine.set_color(GRID)
 
 
-def plot_file(file_number, label, frequencies, amplitudes, result, rpm, path):
+def plot_file(file_number, title, frequencies, amplitudes, result, rpm, path):
     """Save one detailed spectrum plot for one file."""
     fig, ax = plt.subplots(figsize=(9, 4.8), facecolor=SURFACE)
     _draw_spectrum(ax, frequencies, amplitudes, result, rpm)
     ax.set_xlabel("Frequency (Hz), calculated assuming 12 kHz", color=INK)
     ax.set_ylabel("Amplitude (g, log scale)", color=INK)
-    ax.set_title(f"{file_number}.mat  |  {label}  |  {rpm:.0f} rpm  |  "
+    ax.set_title(f"{file_number}.mat  |  {title}  |  {rpm:.0f} rpm  |  "
                  f"verdict: {result['verdict']}", color=INK, fontsize=11, loc="left")
     ax.plot([], [], color=COLOUR_REFERENCE, linestyle=":",
             label="Theoretical fault frequencies")
@@ -177,24 +199,24 @@ def plot_file(file_number, label, frequencies, amplitudes, result, rpm, path):
 
 
 def plot_overview(panels, path):
-    """All files on one page, so any odd one out is easy to spot."""
+    """All files on one page (one row per condition, one column per load)."""
     n = len(panels)
     n_cols = min(4, n)
     n_rows = math.ceil(n / n_cols)
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3.6 * n_cols, 2.6 * n_rows + 0.8),
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3.6 * n_cols, 2.4 * n_rows + 0.9),
                              facecolor=SURFACE, squeeze=False)
     for ax, (file_number, label, freqs, amps, result, rpm) in zip(axes.flat, panels):
         _draw_spectrum(ax, freqs, amps, result, rpm, compact=True)
-        ax.set_title(f"{file_number}.mat {label}\n{result['verdict']}",
+        ax.set_title(f"{file_number}.mat {label}: {result['verdict']}",
                      fontsize=8, color=INK, loc="left")
     for ax in list(axes.flat)[n:]:
         ax.set_visible(False)
     handles, labels = axes.flat[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=3, fontsize=8,
+    fig.legend(handles, labels, loc="upper center", ncol=3, fontsize=9,
                frameon=False, labelcolor=INK_SECONDARY)
-    fig.supxlabel("Frequency (Hz), calculated assuming 12 kHz", fontsize=9, color=INK)
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
-    fig.savefig(path, dpi=110)
+    fig.supxlabel("Frequency (Hz), calculated assuming 12 kHz", fontsize=10, color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 1 - 0.5 / (2.4 * n_rows + 0.9)))
+    fig.savefig(path, dpi=100)
     plt.close(fig)
 
 
@@ -224,8 +246,11 @@ def main():
         # If config says this file is 48 kHz, prove the resampled copy is right.
         if rate_in_config != config.TARGET_SAMPLING_RATE_HZ:
             resampled = load_data.resample_to_target(signal, rate_in_config)
-            after, _, _ = check_signal(resampled, rpm)
+            after, freqs_after, amps_after = check_signal(resampled, rpm)
             row["verdict_after_resampling"] = after["verdict"]
+            plot_file(number, label + ", resampled to 12 kHz", freqs_after,
+                      amps_after, after, rpm,
+                      figure_dir / f"{number}_resampled_to_12k.png")
         else:
             row["verdict_after_resampling"] = "not needed"
 
@@ -241,21 +266,26 @@ def main():
     table.to_csv(out_csv, index=False)
     plot_overview(panels, config.FIGURES_DIR / "sampling_rate_overview.png")
 
-    columns = ["file_number", "rpm", "if_12k_found_hz", "if_12k_peak_ratio",
-               "if_48k_found_hz", "if_48k_peak_ratio", "verdict"]
+    columns = ["file_number", "rpm", "ratio_at_0.25x", "ratio_at_0.50x",
+               "ratio_at_0.75x", "ratio_at_1.00x", "verdict", "rate_in_config_hz",
+               "verdict_after_resampling"]
     print(table[columns].to_string(index=False))
 
     # Shout if the evidence disagrees with what config.py says.
     disagree = table[(table["verdict"] != "inconclusive") &
                      (table["verdict"] != table["rate_in_config_hz"].map(verdict_for_rate))]
     unsure = table[table["verdict"] == "inconclusive"]
+    bad_resample = table[~table["verdict_after_resampling"].isin(["not needed", "12kHz"])]
     if len(disagree):
         print("\nWARNING: these files disagree with config.py and need an override:")
         print(disagree[["file_number", "verdict", "rate_in_config_hz"]].to_string(index=False))
     if len(unsure):
         print("\nWARNING: inconclusive - look at the plots for files",
               ", ".join(str(n) for n in unsure["file_number"]))
-    if not len(disagree) and not len(unsure):
+    if len(bad_resample):
+        print("\nWARNING: resampled files that do not check out as 12 kHz:",
+              ", ".join(str(n) for n in bad_resample["file_number"]))
+    if not (len(disagree) or len(unsure) or len(bad_resample)):
         print("\nAll checked files agree with the sampling rates in config.py.")
 
     print(f"\nSaved {out_csv.relative_to(config.REPO_ROOT)} and plots in "

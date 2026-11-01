@@ -1,24 +1,16 @@
 CWRU data quality report (written by src/load_data.py)
 
 Expected files: 40
-  ok                   5
-  missing              35
+  ok                   40
+  missing              0
   unreadable           0
   excluded_duplicate   0
 
-Missing files (35):
-  normal      0.000 in: 97, 98, 99, 100
-  inner_race  0.007 in: 105, 106, 107, 108
-  inner_race  0.014 in: 169, 170, 171, 172
-  inner_race  0.021 in: 209, 210, 211, 212
-  ball        0.007 in: 118, 119, 120, 121
-  ball        0.014 in: 185, 186, 187, 188
-  ball        0.021 in: 222, 223, 224
-  outer_race  0.007 in: 130, 131, 132, 133
-  outer_race  0.014 in: 197, 198, 199, 200
+Missing files (0):
+  none
 
 Exact duplicate signals (identical sample-for-sample):
-  none among the 5 files present
+  98.mat:X098_DE_time == 99.mat:X098_DE_time
 
 Signals sharing their first 1000 samples but not identical overall (possible partial copies):
   none
@@ -30,4 +22,11 @@ Files in data/raw/ that are not in the expected list:
   none
 
 Per-file notes:
+  99: file also contains X098_DE_time
+  100: stored rpm 1725 differs from nominal 1730 by -5
+  108: stored rpm 1721 differs from nominal 1730 by -9
+  121: stored rpm 1722 differs from nominal 1730 by -8
+  188: stored rpm 1724 differs from nominal 1730 by -6
+  133: stored rpm 1725 differs from nominal 1730 by -5
+  200: stored rpm 1723 differs from nominal 1730 by -7
   237: stored rpm 1721 differs from nominal 1730 by -9

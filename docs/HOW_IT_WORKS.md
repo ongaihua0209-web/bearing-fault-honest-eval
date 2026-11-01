@@ -1,4 +1,4 @@
-# How it works: version 1 (2026-11-01)
+# How it works: version 2 (2026-11-01)
 
 A plain-English guide to every file in this project, written for someone
 who has never programmed.
@@ -93,13 +93,18 @@ signal. It always hands back 12 kHz data, converting any file known to be
 Run with `python -m src.check_sampling_rate` (after `load_data`). It
 answers: was each file really recorded at 12 kHz?
 - The shaft turns rpm/60 times a second (about 30 Hz), so the spectrum
-  should show a peak there.
+  should show a peak there, and usually at 2× and 3× as well.
 - If a file were really 48 kHz but read as 12 kHz, every frequency would
-  come out 4 times too low, and the peak would show up near 7.5 Hz instead.
-- The script looks in both places and reports which one has the peak.
+  come out 4 times too low. Its 1×, 2× and 3× peaks would then show up at
+  ¼, ½ and ¾ of shaft speed instead.
+- A genuine 12 kHz recording has no reason to vibrate at those fractions.
+  So peaks there are the tell-tale sign of a 48 kHz file.
 
-It writes `results/sampling_rate_check.csv` and a plot per file in
-`results/figures/`.
+This is how we found that the four normal (healthy) files were recorded at
+48 kHz. `config.py` records that, and `load_signal()` converts them to
+12 kHz. The script writes `results/sampling_rate_check.csv` and a plot per
+file in `results/figures/`, including a "resampled to 12 kHz" plot for each
+converted file.
 
 **`src/bearing_physics.py`: the pencil-and-paper part.**
 Run with `python -m src.bearing_physics`. It calculates the bearing fault
@@ -187,8 +192,9 @@ Open a terminal in the project folder and run these one at a time.
 `src` folder". It must be run from the project's top folder, so that
 Python can find `src`.
 
-## Adding the missing data files
+## Adding or replacing data files
 
-Put the missing `.mat` files in `data/raw/`, named by file number (e.g.
-`97.mat`, `105.mat`), then re-run steps 3-5. The manifest, the duplicate
-check and the sampling-rate check will cover the new files automatically.
+All 40 files are in `data/raw/`. If a file is ever added or replaced, name
+it by file number (e.g. `105.mat`) and re-run steps 3-5. The manifest, the
+duplicate check and the sampling-rate check cover it automatically, and the
+tests fail if anything about it does not add up.

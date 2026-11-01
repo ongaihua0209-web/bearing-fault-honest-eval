@@ -33,10 +33,12 @@ FIGURES_DIR = RESULTS_DIR / "figures"
 ASSUMED_SAMPLING_RATE_HZ = 12_000
 TARGET_SAMPLING_RATE_HZ = 12_000
 
-# No overrides yet: all files checked so far are confirmed 12 kHz
-# (see docs/VALIDATION.md). The normal files 97-100 have not been checked
-# because they are not in data/raw/ yet.
-RECORDED_SAMPLING_RATE_OVERRIDES = {}
+# The four normal (healthy) files were recorded at 48 kHz, not 12 kHz.
+# Evidence (docs/VALIDATION.md, section 3): read as 12 kHz, each shows clear
+# peaks at 0.25x, 0.5x and 0.75x shaft speed (= its true 1x, 2x, 3x), which
+# no 12 kHz file shows; and at 48 kHz files 98-100 last 10.1 s, the same as
+# every fault recording. load_data.load_signal() resamples them to 12 kHz.
+RECORDED_SAMPLING_RATE_OVERRIDES = {97: 48_000, 98: 48_000, 99: 48_000, 100: 48_000}
 
 # ---------------------------------------------------------------------------
 # Motor load (horsepower) -> nominal shaft speed (rpm).
