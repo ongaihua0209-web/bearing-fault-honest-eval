@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import scipy.io
+import scipy.signal
 
 from src import config, load_data
 
@@ -169,6 +170,38 @@ class TestResampling(unittest.TestCase):
         np.testing.assert_array_equal(load_data.resample_to_target(x, 12_000, 12_000), x)
 
 
+class TestLowpass(unittest.TestCase):
+    """The 5 kHz low-pass filter must meet the spec written in config.py."""
+
+    def setUp(self):
+        taps = load_data.lowpass_filter_taps()
+        freqs = np.linspace(0, 6000, 6001)
+        _, h = scipy.signal.freqz(taps, worN=freqs, fs=12_000)
+        self.freqs = freqs
+        # Applied forwards and backwards, so the dB effect doubles.
+        self.gain_db = 2 * 20 * np.log10(np.maximum(np.abs(h), 1e-15))
+
+    def test_passband_is_flat(self):
+        keep = self.freqs <= config.LOWPASS_PASSBAND_EDGE_HZ
+        self.assertLess(np.abs(self.gain_db[keep]).max(), 0.1)
+
+    def test_stopband_is_at_least_120_db_down(self):
+        cut = self.freqs >= config.LOWPASS_STOPBAND_EDGE_HZ
+        self.assertLess(self.gain_db[cut].max(), -120)
+
+    def test_low_frequency_sine_is_unchanged_and_not_delayed(self):
+        t = np.arange(12_000 * 2) / 12_000
+        x = np.sin(2 * np.pi * 1000 * t)
+        y = load_data.lowpass(x)
+        middle = slice(1000, -1000)                 # ignore the very ends
+        self.assertLess(np.abs(y[middle] - x[middle]).max(), 1e-3)
+
+    def test_high_frequency_sine_is_removed(self):
+        t = np.arange(12_000 * 2) / 12_000
+        y = load_data.lowpass(np.sin(2 * np.pi * 5500 * t))
+        self.assertLess(np.abs(y[1000:-1000]).max(), 1e-5)
+
+
 class TestRealFiles(unittest.TestCase):
     """Sanity checks on whichever real CWRU files are present."""
 
@@ -182,10 +215,25 @@ class TestRealFiles(unittest.TestCase):
                 signal, rpm, fs = load_data.load_signal(r["file_number"])
                 self.assertEqual(signal.ndim, 1)
                 self.assertEqual(fs, 12_000)
-                self.assertGreater(signal.size, 12_000 * 5)    # > 5 seconds
+                # > 4 seconds (the shortest file, normal 97, is about 5 s)
+                self.assertGreater(signal.size, 12_000 * 4)
                 self.assertTrue(np.all(np.isfinite(signal)))
                 self.assertGreater(rpm, 1650)
                 self.assertLess(rpm, 1850)
+
+    def test_known_copy_inside_file_99_is_reported_not_used(self):
+        """
+        CWRU's 99.mat also contains X098_DE_time, an exact copy of 98.mat's
+        signal. It must be reported, and 99 must use its own X099 signal.
+        """
+        if not (load_data.mat_path(98).exists() and load_data.mat_path(99).exists()):
+            self.skipTest("files 98 and 99 not in data/raw/")
+        manifest, findings = load_data.build_manifest()
+        self.assertIn([(98, "X098_DE_time"), (99, "X098_DE_time")],
+                      findings["exact_duplicate_groups"])
+        row = manifest.set_index("file_number").loc[99]
+        self.assertEqual(row["de_variable"], "X099_DE_time")
+        self.assertEqual(row["status"], "ok")
 
 
 if __name__ == "__main__":

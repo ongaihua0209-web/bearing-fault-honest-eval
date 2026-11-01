@@ -146,6 +146,36 @@ def resample_to_target(signal, from_hz, to_hz=config.TARGET_SAMPLING_RATE_HZ):
     return scipy.signal.resample_poly(signal, up, down)
 
 
+def lowpass_filter_taps(fs=config.TARGET_SAMPLING_RATE_HZ):
+    """
+    Design the low-pass filter described in config.py.
+
+    The filter is a weighted moving average (an "FIR filter"): each output
+    sample is a weighted sum of nearby input samples. scipy's kaiserord
+    works out how many weights are needed to meet the spec (flat below
+    4.8 kHz, at least 60 dB down above 5.2 kHz), and firwin calculates them.
+    The result is about 100 weights.
+    """
+    pass_edge = config.LOWPASS_PASSBAND_EDGE_HZ
+    stop_edge = config.LOWPASS_STOPBAND_EDGE_HZ
+    width = (stop_edge - pass_edge) / (fs / 2)     # as a fraction of Nyquist
+    n_taps, beta = scipy.signal.kaiserord(config.LOWPASS_STOPBAND_ATTENUATION_DB, width)
+    n_taps += 1 - n_taps % 2       # make it odd, so the filter is symmetric
+    cutoff = (pass_edge + stop_edge) / 2
+    return scipy.signal.firwin(n_taps, cutoff, window=("kaiser", beta), fs=fs)
+
+
+def lowpass(signal, fs=config.TARGET_SAMPLING_RATE_HZ):
+    """
+    Remove everything above about 5 kHz (see config.py for why).
+
+    filtfilt runs the filter forwards and then backwards. That cancels the
+    filter's time delay, so impacts stay exactly where they were, and it
+    doubles the attenuation (at least 120 dB above 5.2 kHz).
+    """
+    return scipy.signal.filtfilt(lowpass_filter_taps(fs), [1.0], signal)
+
+
 # ---------------------------------------------------------------------------
 # Duplicate detection
 # ---------------------------------------------------------------------------
@@ -395,15 +425,19 @@ def load_raw_signal(file_number, raw_dir=config.RAW_DATA_DIR):
 
 def load_signal(file_number, raw_dir=config.RAW_DATA_DIR):
     """
-    Load one file's drive-end signal, always at 12 kHz.
+    Load one file's drive-end signal, ready for the rest of the project.
+
+    Every signal comes out the same way, whatever class it belongs to:
+      1. at 12 kHz - files recorded at 48 kHz (per config.py) are resampled;
+      2. low-pass filtered at 5 kHz - so no class can be recognised from
+         its recording equipment's behaviour near the top of the band.
 
     Returns (signal, rpm, sampling_rate_hz).
-    If config.py records the file as 48 kHz, it is resampled to 12 kHz here,
-    so later code never has to think about it.
     """
     signal, rpm = load_raw_signal(file_number, raw_dir)
     recorded_hz = recorded_sampling_rate(file_number)
     signal = resample_to_target(signal, recorded_hz, config.TARGET_SAMPLING_RATE_HZ)
+    signal = lowpass(signal, config.TARGET_SAMPLING_RATE_HZ)
     return signal, rpm, config.TARGET_SAMPLING_RATE_HZ
 
 

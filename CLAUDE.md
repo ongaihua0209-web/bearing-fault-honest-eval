@@ -43,7 +43,11 @@ every decision in plain English.
 - Every fixed fact (file list, labels, bearing geometry, nominal speeds,
   sampling rates, paths) lives in `src/config.py` and nowhere else.
 - Other code gets signals only through `load_data.load_signal()`. That
-  guarantees every signal arrives at 12 kHz.
+  guarantees every signal arrives at 12 kHz and low-pass filtered at 5 kHz
+  (flat to 4.8 kHz, at least 120 dB down above 5.2 kHz).
+- **Features use 0-4.8 kHz only.** Above that, the normal files still
+  differ from the fault files at around −110 dB because they were recorded
+  differently (docs/VALIDATION.md 3.5).
 - Files in `results/` are written by scripts. Never edit them by hand.
 - Report unexpected or negative findings in `docs/VALIDATION.md`. Do not
   hide them.
@@ -74,14 +78,19 @@ every decision in plain English.
   are about 1797, 1772, 1750 and 1730 rpm.
 - The fault data is drive-end (DE) at 12 kHz. Use the DE channel.
 - Use each file's stored RPM where present, otherwise the nominal speed.
-- Sources disagree on whether the normal baseline is 12 kHz or 48 kHz.
-  `src/check_sampling_rate.py` checks this from the data.
-- One normal file reportedly contains a copy of another.
-  `src/load_data.py` checks this and excludes exact duplicates.
+  98 and 99 store no RPM.
+- **The normal files 97-100 were recorded at 48 kHz** (checked from the
+  data by `src/check_sampling_rate.py`). `load_signal()` resamples them to
+  12 kHz.
+- **99.mat also contains a copy of 98's signal** (`X098_DE_time`). The
+  loader uses `X099_DE_time` and reports the copy. No file is excluded.
 
-**Data status (2026-11-01):** only **5 of the 40** files are present: 225
-(ball, 0.021 in, 3 HP) and 234-237 (outer race, 0.021 in, 0-3 HP). No normal
-files are present yet. See `results/data_quality_report.txt`.
+**Data status (2026-11-01):** all **40 of 40** files are present and
+readable. Known issues and evidence are in `docs/VALIDATION.md`:
+- the normal class was recorded differently (48 kHz, no BA channel, 97 is
+  only 5 s long). That is a leakage risk;
+- an exploratory envelope check finds no clear labelled-fault signature in
+  the 12 ball files or the 4 outer-race 0.014 in files.
 
 ### Bearing
 
@@ -102,11 +111,13 @@ bearing-fault-honest-eval/
 ├── CHANGELOG.md                  what changed in each session              [done]
 ├── README.md                     portfolio-facing summary                  [planned]
 ├── requirements.txt              pinned library versions                   [done]
-├── data/raw/                     CWRU .mat files, e.g. 105.mat             [5 of 40]
+├── data/raw/                     CWRU .mat files, e.g. 105.mat             [40 of 40]
 ├── src/
 │   ├── config.py                 all fixed facts: files, labels, geometry  [done]
 │   ├── load_data.py              load files, manifest, duplicate check     [done]
 │   ├── check_sampling_rate.py    12 vs 48 kHz check from the 1x peak      [done]
+│   ├── check_band_edge.py        proves the 5 kHz low-pass evens out
+│   │                             the band edge across classes            [done]
 │   ├── bearing_physics.py        fault frequencies from geometry           [done]
 │   ├── check_fault_signatures.py envelope spectrum: does each file show
 │   │                             its labelled fault frequency?             [planned]
@@ -115,11 +126,11 @@ bearing-fault-honest-eval/
 │   ├── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
 │   ├── splits.py                 leaky vs honest train/test splits         [planned]
 │   └── evaluate.py               train models, score, save results         [planned]
-├── tests/                        one test file per src module              [done for 4 modules]
+├── tests/                        one test file per src module              [done for 5 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v1]
-    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v1]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v2]
+    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v2]
 ```
 
 ### Planned approach (subject to the owner's decisions)
@@ -144,5 +155,6 @@ pip install -r requirements.txt
 python -m src.bearing_physics        # fault-frequency table
 python -m src.load_data              # manifest + data-quality report
 python -m src.check_sampling_rate    # sampling-rate check + plots
+python -m src.check_band_edge        # 5 kHz low-pass check + plot
 python -m unittest discover -s tests -v
 ```
