@@ -3,6 +3,117 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 3b (2026-11-02): checked against CWRU's official website
+
+Owner request: check the files against the official website. The owner
+allowed `engineering.case.edu` in the session's network settings. No data
+file was downloaded; file sizes came from header-only requests.
+
+### Added / changed
+- `data/cwru_official_reference.csv` (new): the official name, size in
+  bytes, date and address of each of our 40 files, as listed on 2026-11-02.
+- `src/config.py`:
+  - `cwru_name()` gives each file's official name, which now also appears
+    in the manifest;
+  - `OFFICIAL_REFERENCE_CSV` points to the reference file;
+  - FTF updated to CWRU's 5-decimal figure, 0.39828;
+  - `FAN_END_CWRU_MULTIPLIERS` added;
+  - the load-zone wording is corrected.
+- `src/check_fault_signatures.py`: also records two raw-spectrum peaks per
+  file, at the drive-end and fan-end BPFI. They are not used in verdicts.
+- Tests: 73 (5 new), all passing. They check offline that all 40 labels
+  match the official names and all 40 file sizes match.
+  - Swapping two condition groups in the config makes 8 subtests fail.
+- `docs/VALIDATION.md` v3.1:
+  - new section 1.3 (website check);
+  - section 2.3 adds the FTF note;
+  - section 4.1 is rewritten with the explanation of the rig-wide peaks.
+  - `CLAUDE.md` and `docs/HOW_IT_WORKS.md` updated.
+
+### Found
+- **All 40 files match the official site:** same file number → condition,
+  fault size and load (40/40), and the same size to the byte (40/40).
+- Nominal speeds, bearing geometry, and BPFI, BPFO and rolling-element
+  multipliers all match.
+- CWRU's FTF (0.39828) is 0.008% off their own BPFO ÷ 9 (0.39831), which is
+  negligible.
+- **The site gives no sampling rate for the normal files**, so it does not
+  contradict our 48 kHz finding. RPM was "recorded by hand", and the site
+  says every file has RPM, but 98 and 99 do not.
+- **The site contradicts itself on the outer-race position.** Its table
+  says the load zone is centred at 6:00; its procedures page calls 6:00
+  "orthogonal to the load zone". Our "@6" labels are unaffected.
+- **The rig-wide raw peaks are explained.** At 5.40× and 4.93× shaft speed
+  they are the inner-race frequencies of the drive-end and fan-end bearings
+  (fan-end value from the official site). They are in all 40 files, both
+  about 0.27% below theory.
+
+## Session 3 (2026-11-02): envelope label check; CWRU labels kept
+
+Owner decisions:
+- keep CWRU's labels exactly as published;
+- turn the exploratory envelope check into a tested script.
+
+No models trained.
+
+### Added / changed
+- `src/check_fault_signatures.py` (new): envelope analysis for every file.
+  - **Band choice:** the spikiest (highest-kurtosis) of nine 1.2 kHz bands
+    between 0.4 and 4.8 kHz, plus a fixed 2.0-4.8 kHz band as a second
+    opinion.
+  - **Evidence:** peak/background at BPFO, BPFI and BSF/2×BSF; a type is
+    clear at 10 or more.
+  - **Verdict per file:** matches label, looks like X, or no signature.
+  - **Rules:** fixed and tested on synthetic signals before the first run
+    on real data.
+  - **Sensitivity check:** a ±1% window, added after the first run (see
+    Found). The CSV also records where each peak was found.
+- `src/check_sampling_rate.py`: `peak_strength()` now takes the window
+  sizes as optional arguments. Its default behaviour is unchanged.
+- `tests/test_fault_signatures.py` (new, 15 tests). They cover:
+  - synthetic outer-race, inner-race and ball signals, a mislabelled
+    signal, and noise;
+  - band choice ignoring a loud hum;
+  - the verdict rules and the window widths;
+  - positive controls on real data (inner race 0.007, outer race 0.007,
+    normal).
+
+  The total is 68 tests, all passing. One synthetic test was corrected
+  before the real run: its signal was unrealistically noise-free, and it is
+  now realistically noisy. The method was not changed.
+- `src/config.py` comment, `CLAUDE.md` (label decision, per-class
+  reporting rule), `docs/VALIDATION.md` v3 (sections 4.2 and 4.3 rewritten),
+  `docs/HOW_IT_WORKS.md` v3.
+
+### Found
+- **26 of 40 files match their label:** all normal, all 12 inner race,
+  outer race 0.007 and 0.021, plus 199 (outer race 0.014) and 120 (ball
+  0.007).
+- **Ball:** no sharp ball line in any of the 12 files.
+  - 0.021: all 4 look like inner race.
+  - 0.014: no signature in any of the 4.
+  - 0.007: mixed outer-race and inner-race evidence.
+- **Outer race 0.014:** 1 of 4 matches; 197 and 198 look like inner race,
+  and 200 shows nothing.
+- **Window overlap.** "Ball" evidence in the inner-race and outer-race files
+  is not real ball evidence. It comes from peaks at 2.40× (the inner-race
+  sideband BPFI − 3×) and 4.79-4.80×, sitting at the edges of the ±2% ball
+  windows.
+  - A ±1% window removes them and changes exactly one verdict: ball 120
+    goes from "match" to "looks like outer + inner race".
+  - Under the narrow window, 0 of 12 ball files match.
+- **Broad humps.** Ball files 222 and 223 show broad humps near BSF and
+  2×BSF, which the sharp-peak measure cannot detect. So "no signature"
+  does not mean "no fault".
+
+### Next steps
+1. Write `README.md`.
+2. Read Smith & Randall (2015) in full.
+3. Agree window length, overlap and split design before `segment.py` and
+   `splits.py`.
+4. When designing physics features, consider band energy around BSF and
+   2×BSF, which can see broad humps, instead of sharp-peak ratios only.
+
 ## Session 2b (2026-11-01): 5 kHz low-pass on every signal
 
 Owner decision: low-pass every signal at about 5 kHz, to remove the

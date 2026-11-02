@@ -1,4 +1,4 @@
-# How it works: version 2 (2026-11-01)
+# How it works: version 3 (2026-11-02)
 
 A plain-English guide to every file in this project, written for someone
 who has never programmed.
@@ -59,6 +59,14 @@ So far only the first two stages exist. Nothing is trained yet.
 
 The CWRU `.mat` files, named by CWRU file number (e.g. `234.mat`). Scripts
 only ever *read* these. Nothing changes them.
+
+### `data/cwru_official_reference.csv`: the official check
+
+What CWRU's official website listed on 2026-11-02 for each of our 40
+files: its official name (e.g. `IR007_0`), its size in bytes, and its
+download address. Think of it as the supplier's delivery note. The tests
+compare our labels and our files against it every time they run, without
+going online. All 40 names and all 40 sizes match.
 
 ### `src/`: the working code
 
@@ -125,6 +133,25 @@ It writes `results/band_edge_by_file.csv`, `results/band_edge_filters.csv`
 and `results/figures/band_edge.png`. The figure shows the normal and
 fault files side by side, before and after.
 
+**`src/check_fault_signatures.py`: does each file show its labelled fault?**
+Run with `python -m src.check_fault_signatures`. A damaged spot makes a
+small impact every time a ball passes it. Each impact makes the bearing
+housing ring briefly, like a struck bell. The script looks for the rhythm
+of that ringing:
+1. **Pick a band.** Keep only the frequency band where the ringing is
+   strongest. The script tries nine bands and keeps the "spikiest" one,
+   measured by kurtosis, a number that is large when a signal is made of
+   sharp knocks.
+2. **Trace the outline.** Follow the outline ("envelope") of the ringing.
+3. **Find the rhythm.** Look at how often the outline pulses. A peak at
+   BPFO means an outer-race fault, at BPFI an inner-race fault, and at BSF
+   or 2×BSF a ball fault.
+
+It then says, for every file, whether that rhythm matches the CWRU label.
+It never changes a label; it only reports. It writes
+`results/fault_signatures.csv` and
+`results/figures/fault_signatures_overview.png`.
+
 **`src/bearing_physics.py`: the pencil-and-paper part.**
 Run with `python -m src.bearing_physics`. It calculates the bearing fault
 frequencies (FTF, BPFO, BPFI, BSF) from the ball count and dimensions,
@@ -149,6 +176,11 @@ Each line of output is one check, ending in `ok` or `FAIL`. Examples:
   three correctly?
 - `test_sampling_rate.py`: given a fake signal *known* to be 48 kHz, does
   the check catch it? Do the real files come out as 12 kHz?
+- `test_fault_signatures.py`: given fake signals with a *known* fault
+  (impacts at exactly BPFO, BPFI or 2×BSF, buried in noise), does the check
+  name the right fault, and only that one? Do textbook-clear real files
+  (inner race 0.007, outer race 0.007) match, and do healthy files show
+  nothing?
 - `test_band_edge.py`: after `load_signal()`, does every one of the 40
   files have practically nothing left above 5.2 kHz? (`test_load_data.py`
   also checks the filter itself: unchanged below 4.8 kHz, at least 120 dB
@@ -170,6 +202,7 @@ the code or `config.py` and re-run instead.
 | `sampling_rate_check.csv` | `check_sampling_rate.py` |
 | `figures/sampling_rate/<file>.png`, `figures/sampling_rate_overview.png` | `check_sampling_rate.py` |
 | `band_edge_by_file.csv`, `band_edge_filters.csv`, `figures/band_edge.png` | `check_band_edge.py` |
+| `fault_signatures.csv`, `figures/fault_signatures_overview.png` | `check_fault_signatures.py` |
 | `fault_frequencies.csv` | `bearing_physics.py` |
 
 ### `docs/`: the write-ups
@@ -212,7 +245,13 @@ Open a terminal in the project folder and run these one at a time.
    python -m src.check_band_edge
    ```
 
-6. Run all the tests:
+6. Check each file against its label:
+
+   ```bash
+   python -m src.check_fault_signatures
+   ```
+
+7. Run all the tests:
 
    ```bash
    python -m unittest discover -s tests -v
@@ -225,6 +264,6 @@ Python can find `src`.
 ## Adding or replacing data files
 
 All 40 files are in `data/raw/`. If a file is ever added or replaced, name
-it by file number (e.g. `105.mat`) and re-run steps 3-6. The manifest, the
+it by file number (e.g. `105.mat`) and re-run steps 3-7. The manifest, the
 duplicate check and the sampling-rate check cover it automatically, and the
 tests fail if anything about it does not add up.

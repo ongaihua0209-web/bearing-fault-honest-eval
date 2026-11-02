@@ -170,6 +170,44 @@ class TestResampling(unittest.TestCase):
         np.testing.assert_array_equal(load_data.resample_to_target(x, 12_000, 12_000), x)
 
 
+class TestAgainstOfficialWebsite(unittest.TestCase):
+    """
+    data/cwru_official_reference.csv records what CWRU's official website
+    listed on 2026-11-02: every file's official name and size in bytes.
+    These tests compare our labels and files with it, without going online.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import csv
+        with open(config.OFFICIAL_REFERENCE_CSV, newline="") as f:
+            cls.official = {int(r["file_number"]): r for r in csv.DictReader(f)}
+
+    def test_reference_covers_exactly_our_40_files(self):
+        ours = {r["file_number"] for r in config.expected_files()}
+        self.assertEqual(set(self.official), ours)
+
+    def test_every_label_matches_the_official_name(self):
+        for r in config.expected_files():
+            with self.subTest(file=r["file_number"]):
+                self.assertEqual(r["cwru_name"],
+                                 self.official[r["file_number"]]["cwru_name"])
+
+    def test_name_examples(self):
+        self.assertEqual(config.cwru_name("inner_race", 0.007, 0), "IR007_0")
+        self.assertEqual(config.cwru_name("outer_race", 0.021, 3), "OR021@6_3")
+        self.assertEqual(config.cwru_name("ball", 0.014, 2), "B014_2")
+        self.assertEqual(config.cwru_name("normal", 0.0, 1), "Normal_1")
+
+    def test_every_file_is_the_official_size_to_the_byte(self):
+        for number, row in self.official.items():
+            path = load_data.mat_path(number)
+            if not path.exists():
+                continue
+            with self.subTest(file=number):
+                self.assertEqual(path.stat().st_size, int(row["size_bytes"]))
+
+
 class TestLowpass(unittest.TestCase):
     """The 5 kHz low-pass filter must meet the spec written in config.py."""
 

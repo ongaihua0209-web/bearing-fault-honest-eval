@@ -89,8 +89,15 @@ every decision in plain English.
 readable. Known issues and evidence are in `docs/VALIDATION.md`:
 - the normal class was recorded differently (48 kHz, no BA channel, 97 is
   only 5 s long). That is a leakage risk;
-- an exploratory envelope check finds no clear labelled-fault signature in
-  the 12 ball files or the 4 outer-race 0.014 in files.
+- the envelope label check (`src/check_fault_signatures.py`) finds the
+  labelled fault in 26 of 40 files. It finds no sharp ball line in any of
+  the 12 ball files (ball 0.021 looks like inner race), and only 1 of the
+  4 outer-race 0.014 in files matches.
+
+**Labels: CWRU's labels are kept exactly as published** (owner decision,
+2026-11-02), even where the label check disagrees. Every result must be
+reported **per class** (and per fault size), with the ball and outer-race
+0.014 in groups flagged (docs/VALIDATION.md 4.3).
 
 ### Bearing
 
@@ -98,8 +105,18 @@ Drive-end bearing: SKF 6205-2RS JEM. 9 balls, ball diameter 7.94 mm, pitch
 diameter 39.04 mm, contact angle 0 degrees.
 
 CWRU's published multipliers (× shaft speed): BPFI 5.4152, BPFO 3.5848,
-FTF 0.3983, rolling element 4.7135. The last one is **2 × BSF**. The
+FTF 0.39828, rolling element 4.7135. The last one is **2 × BSF**. The
 standard BSF is 2.3567. See `docs/VALIDATION.md`.
+
+### Checked against the official website (2026-11-02)
+
+- All 40 file numbers, labels and file sizes match CWRU's Bearing Data
+  Center. The record is `data/cwru_official_reference.csv`, and tests
+  re-check it offline. No data was downloaded.
+- The official site contradicts itself on whether 6:00 is the centre of
+  the load zone or orthogonal to it. Do not state either as fact.
+- The site gives no sampling rate for the normal files. Our data shows
+  48 kHz (docs/VALIDATION.md 1.3 and 3).
 
 ## Repository structure
 
@@ -112,6 +129,7 @@ bearing-fault-honest-eval/
 ├── README.md                     portfolio-facing summary                  [planned]
 ├── requirements.txt              pinned library versions                   [done]
 ├── data/raw/                     CWRU .mat files, e.g. 105.mat             [40 of 40]
+├── data/cwru_official_reference.csv  official names + sizes (read 2026-11-02) [done]
 ├── src/
 │   ├── config.py                 all fixed facts: files, labels, geometry  [done]
 │   ├── load_data.py              load files, manifest, duplicate check     [done]
@@ -120,16 +138,16 @@ bearing-fault-honest-eval/
 │   │                             the band edge across classes            [done]
 │   ├── bearing_physics.py        fault frequencies from geometry           [done]
 │   ├── check_fault_signatures.py envelope spectrum: does each file show
-│   │                             its labelled fault frequency?             [planned]
+│   │                             its labelled fault frequency?             [done]
 │   ├── segment.py                cut signals into fixed-length windows     [planned]
 │   ├── features_statistical.py   generic features (RMS, kurtosis, ...)     [planned]
 │   ├── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
 │   ├── splits.py                 leaky vs honest train/test splits         [planned]
 │   └── evaluate.py               train models, score, save results         [planned]
-├── tests/                        one test file per src module              [done for 5 modules]
+├── tests/                        one test file per src module              [done for 6 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v2]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v3.1]
     └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v2]
 ```
 
@@ -156,5 +174,6 @@ python -m src.bearing_physics        # fault-frequency table
 python -m src.load_data              # manifest + data-quality report
 python -m src.check_sampling_rate    # sampling-rate check + plots
 python -m src.check_band_edge        # 5 kHz low-pass check + plot
+python -m src.check_fault_signatures # envelope label check + plot
 python -m unittest discover -s tests -v
 ```

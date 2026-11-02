@@ -71,22 +71,46 @@ BALL_DIAMETER_MM = 7.94
 PITCH_DIAMETER_MM = 39.04
 CONTACT_ANGLE_DEG = 0.0
 
-# CWRU's published fault-frequency multipliers (multiply by shaft speed in Hz).
-# We do NOT use these in calculations - we calculate our own from the
-# geometry above and use these only to check our maths (see tests/).
+# CWRU's published fault-frequency multipliers (multiply by shaft speed in Hz),
+# copied from https://engineering.case.edu/bearingdatacenter/bearing-information
+# (checked 2026-11-02). We do NOT use these in calculations - we calculate our
+# own from the geometry above and use these only to check our maths.
+# Note: CWRU's FTF (0.39828) is slightly inconsistent with their own BPFO:
+# FTF should equal BPFO / 9 = 0.39831. The 0.008% gap is negligible.
 CWRU_PUBLISHED_MULTIPLIERS = {
     "BPFI": 5.4152,
     "BPFO": 3.5848,
-    "FTF": 0.3983,
+    "FTF": 0.39828,
     "rolling_element": 4.7135,
 }
+
+# Fan-end bearing (SKF 6203-2RS JEM), same source. We do not analyse fan-end
+# data, but its inner-race frequency shows up in every drive-end recording
+# (docs/VALIDATION.md 4.1), so we need it to recognise that peak.
+FAN_END_CWRU_MULTIPLIERS = {
+    "BPFI": 4.9469,
+    "BPFO": 3.0530,
+    "FTF": 0.3817,
+    "rolling_element": 3.9874,
+}
+
+# What we read on CWRU's official website (2026-11-02): every file's official
+# name, size in bytes and download address. Used by tests to check that our
+# labels and files match the official ones - without going online.
+OFFICIAL_REFERENCE_CSV = REPO_ROOT / "data" / "cwru_official_reference.csv"
 
 # ---------------------------------------------------------------------------
 # The 40 files we expect, named by CWRU file number.
 # Each group lists four files, for 0, 1, 2 and 3 HP motor load in that order.
 # fault_size_in is the fault diameter in inches (0.0 means no fault).
-# All outer-race faults in this set are at the 6 o'clock position (the
-# centre of the load zone).
+# All outer-race faults in this set are at the 6 o'clock position. CWRU's
+# website contradicts itself about where that is: its data table says the
+# load zone is centred at 6:00, its procedures page calls 6:00 "orthogonal to
+# the load zone" (docs/VALIDATION.md 1.3). The file labels are unaffected.
+#
+# These are CWRU's labels, kept exactly as published (owner decision,
+# 2026-11-02) - even for the 14 files where src/check_fault_signatures.py
+# does not find the labelled fault. See docs/VALIDATION.md 4.2-4.3.
 # ---------------------------------------------------------------------------
 FILE_GROUPS = [
     # (fault_location, fault_size_in, [files for 0 HP, 1 HP, 2 HP, 3 HP])
@@ -103,13 +127,25 @@ FILE_GROUPS = [
 ]
 
 
+def cwru_name(fault_location, fault_size_in, load_hp):
+    """
+    The name CWRU's website uses for a file, e.g. ("inner_race", 0.007, 0)
+    -> "IR007_0", ("outer_race", 0.021, 3) -> "OR021@6_3", ("normal", 0, 1)
+    -> "Normal_1". Handy for cross-checking with the official tables.
+    """
+    size = f"{round(fault_size_in * 1000):03d}"          # 0.007 -> "007"
+    prefix = {"normal": "Normal", "inner_race": f"IR{size}",
+              "ball": f"B{size}", "outer_race": f"OR{size}@6"}[fault_location]
+    return f"{prefix}_{load_hp}"
+
+
 def expected_files():
     """
     Turn FILE_GROUPS into one row per file.
 
     Returns a list of dictionaries like:
-      {"file_number": 105, "fault_location": "inner_race",
-       "fault_size_in": 0.007, "load_hp": 0}
+      {"file_number": 105, "cwru_name": "IR007_0", "fault_location":
+       "inner_race", "fault_size_in": 0.007, "load_hp": 0}
     """
     rows = []
     for fault_location, fault_size_in, file_numbers in FILE_GROUPS:
@@ -117,6 +153,7 @@ def expected_files():
         for load_hp, file_number in enumerate(file_numbers):
             rows.append({
                 "file_number": file_number,
+                "cwru_name": cwru_name(fault_location, fault_size_in, load_hp),
                 "fault_location": fault_location,
                 "fault_size_in": fault_size_in,
                 "load_hp": load_hp,
