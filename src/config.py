@@ -58,6 +58,14 @@ LOWPASS_STOPBAND_EDGE_HZ = 5_200
 LOWPASS_STOPBAND_ATTENUATION_DB = 60
 
 # ---------------------------------------------------------------------------
+# Windows for machine learning (owner decision, 2026-11-02).
+# Each recording is cut into non-overlapping windows of 2048 samples:
+# 2048 / 12000 Hz = 0.17 s, about 5 shaft turns at 1797 rpm, and about 18
+# outer-race / 28 inner-race impacts - enough to capture the fault rhythm.
+# ---------------------------------------------------------------------------
+WINDOW_LENGTH_SAMPLES = 2048
+
+# ---------------------------------------------------------------------------
 # Motor load (horsepower) -> nominal shaft speed (rpm).
 # Used only when a file does not store its own measured RPM.
 # ---------------------------------------------------------------------------

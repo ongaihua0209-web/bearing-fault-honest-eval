@@ -3,6 +3,73 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 4 (2026-11-02): split protocols, generic-feature baseline, leakage measured
+
+### Added
+- `src/config.py`: `WINDOW_LENGTH_SAMPLES = 2048`.
+- `src/segment.py`: cuts every recording into back-to-back 2048-sample
+  windows with no overlap. That gives 2331 windows: 206 normal, 709 inner
+  race, 708 ball and 708 outer race. Each window keeps its recording's
+  facts.
+- `src/splits.py`: three protocols. The label is the fault location.
+  - **A, random:** 80/20, stratified, a new split per seed. Leaky by
+    design.
+  - **B, unseen load:** train 0-2 HP, test 3 HP.
+  - **C, unseen fault size:** 3 folds. The healthy class holds out 1, 2 or
+    3 HP; file 97 stays in training because it is short. The docstring
+    states that the healthy class still shares one bearing, and that B
+    shares every bearing.
+- `src/features.py`: feature set F1. RMS, peak, peak-to-peak, crest
+  factor, kurtosis (engineering convention, noise = 3), skewness and std.
+- `src/run_experiments.py`:
+  - **Models:** logistic regression, random forest (300 trees) and
+    gradient boosting, with no tuning.
+  - **No fitting on test data:** the scaler sits inside a pipeline, so it
+    is fitted on training data only. Balanced class weights come from the
+    training labels.
+  - **Seeds:** 5. Protocol C is averaged over its folds per seed.
+  - **Outputs:** `results/results_f1.csv`, plus per-run, per-group,
+    per-fold and confusion-matrix CSVs, a bar chart, and confusion
+    matrices for the best model under A and C.
+  - **Run time:** 105 s on a 4-core CPU. A re-run gives identical numbers.
+- Tests: 102 (29 new), all passing.
+  - `test_splits.py`: no window on both sides; no faulty recording on both
+    sides in B and C; the held-out size never in training; the leak in A
+    proven to exist.
+  - `test_run_experiments.py`: the scaler learns from training data only;
+    scrambling the test labels changes no prediction.
+  - `test_features.py` and `test_segment.py`.
+- `docs/HOW_IT_WORKS.md` v4: data leakage explained with an exam analogy,
+  why protocol A is misleading, and the new files. `docs/VALIDATION.md` v4,
+  new section 5. `CLAUDE.md` updated.
+
+### Found (macro-F1, mean ± std over 5 seeds)
+| Protocol | Logistic regression | Random forest | Gradient boosting |
+|---|---|---|---|
+| A random | 0.854 ± 0.011 | 0.986 ± 0.003 | 0.981 ± 0.005 |
+| B unseen load | 0.763 ± 0.000 | 0.968 ± 0.001 | 0.959 ± 0.001 |
+| C unseen fault size | 0.504 ± 0.000 | 0.458 ± 0.004 | 0.460 ± 0.001 |
+
+- **Leakage inflates the random forest's macro-F1 from 0.46 to 0.99.** B
+  keeps most of the inflation (0.97), because it tests on bearings already
+  studied at other loads.
+- **Under C, inner race collapses** to 0-9% correct for the tree models,
+  even though it has the clearest physical signature.
+- **"Ball" becomes the default answer:** 61% of all faulty test windows are
+  called ball by the random forest.
+- **Outer race 0.007 and 0.014 score 0%; 0.021 scores about 100%.**
+- **Normal scores 100% everywhere.** It shares its bearing, so this does not
+  show that healthy bearings are recognised in general.
+- **Logistic regression is worst under A and B but best under C.**
+- **Folds vary far more than seeds** (C folds 0.32-0.72).
+
+### Next steps
+1. Physics-informed features: envelope band energy at BPFO, BPFI, BSF and
+   2×BSF, normalised by shaft speed. Compare with F1 under B and C; inner
+   race under C is the clearest test.
+2. Write `README.md` around the A → B → C chart.
+3. Read Smith & Randall (2015) in full.
+
 ## Session 3b (2026-11-02): checked against CWRU's official website
 
 Owner request: check the files against the official website. The owner

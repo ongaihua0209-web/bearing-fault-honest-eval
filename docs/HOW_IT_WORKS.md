@@ -1,4 +1,4 @@
-# How it works: version 3 (2026-11-02)
+# How it works: version 4 (2026-11-02)
 
 A plain-English guide to every file in this project, written for someone
 who has never programmed.
@@ -9,13 +9,55 @@ The project is a measurement chain, like an instrumented test rig. Each
 step checks the one before it before anything gets built on top:
 
 ```
- raw recordings     check & list them      check the physics       (later)
- data/raw/*.mat --> load_data.py      --> bearing_physics.py  --> features
-                    check_sampling_rate.py                     --> models
-                                                              --> honest scores
+ raw recordings     check & list them      cut into windows    describe each     train & test
+ data/raw/*.mat --> load_data.py      --> segment.py      --> window         --> run_experiments.py
+                    check_*.py                                features.py        (3 ways of testing:
+                    bearing_physics.py                                            splits.py)
 ```
 
-So far only the first two stages exist. Nothing is trained yet.
+The checking stages are complete. The first experiment (generic features,
+three ways of testing) is in place; physics-based features come next.
+
+## Data leakage, explained with an exam
+
+Imagine a teacher who wants to know whether students understand
+mechanics. She writes 100 questions, gives the students 80 to study, and
+sets the exam from the other 20.
+
+Now imagine the 100 questions were made by taking 10 long problems and
+cutting each into 10 small steps. Steps from the same problem look alike:
+same numbers, same diagram. If the 80 study questions and the 20 exam
+questions are picked at random, almost every exam question has a sibling
+in the study pile. A student who memorised the study pile scores 98% on
+the exam without understanding any mechanics. They recognise the problem;
+they do not solve it.
+
+That is **data leakage**, and it is exactly what happens with CWRU:
+
+| Exam | This project |
+|---|---|
+| a long problem | one 10-second recording |
+| its small steps | the 0.17-second windows cut from it |
+| study pile / exam | training set / test set |
+| memorising the problem | recognising the recording: its loudness, noise and quirks |
+| understanding mechanics | recognising the *fault*, on a machine never seen before |
+
+**Why protocol A (random windows) is misleading.** It is the random
+pick in the story. Every recording ends up in both the training and the
+test set, so the model can score highly just by recognising recordings.
+In our run it scores 0.99, which looks like a solved problem. When the
+same models are tested on fault sizes they have never seen (protocol C),
+they score about 0.46-0.50, where 0.25 is pure guessing.
+
+The 0.99 was not wrong arithmetic. It answered a different, much easier
+question ("have I seen this recording before?") than the one that matters
+("can I recognise this fault on a new bearing?").
+
+**Protocol B (new load) leaks too, in a quieter way.** Each CWRU fault is
+one physical bearing, recorded at four loads. Testing at a new load still
+tests the *same bearing* the model studied, like an exam with the same
+problems and slightly different numbers. That is why B scores almost as
+high as A (0.97).
 
 ## Words you will meet
 
@@ -152,6 +194,55 @@ It never changes a label; it only reports. It writes
 `results/fault_signatures.csv` and
 `results/figures/fault_signatures_overview.png`.
 
+**`src/segment.py`: cutting recordings into windows.**
+Run with `python -m src.segment`. It cuts every recording into
+back-to-back windows of 2048 samples (0.17 s), with no overlap. That gives
+2331 windows from the 40 recordings. Every window remembers which
+recording, fault type, fault size and load it came from.
+
+**`src/features.py`: describing each window with 7 numbers.**
+Feature set "F1" holds seven everyday vibration statistics: RMS, peak,
+peak-to-peak, crest factor, kurtosis, skewness and standard deviation.
+They know nothing about bearings. (Careful: "F1" is the name of this
+feature set; "macro-F1" is a score, explained below.)
+
+**`src/splits.py`: three ways of choosing the exam.**
+- **A, random:** shuffle all windows and keep 20% for testing. Leaky on
+  purpose (see "Data leakage, explained with an exam").
+- **B, unseen load:** train on 0-2 HP, test on 3 HP. No recording is on
+  both sides, but every bearing is.
+- **C, unseen fault size:** three rounds. Each round tests on one fault
+  size (0.007, 0.014 or 0.021 in) of every fault type, and trains on the
+  other two. The faulty test bearings are truly new. The healthy class has
+  only one bearing, so the healthy test windows come from that same
+  bearing at a different load.
+
+**`src/run_experiments.py`: the experiment.**
+Run with `python -m src.run_experiments`. It takes about 2 minutes. For
+every protocol it trains three kinds of model:
+- logistic regression, which draws straight dividing lines;
+- random forest, a vote among hundreds of decision trees;
+- gradient boosting, which builds trees one after another, each fixing
+  the last one's mistakes.
+
+Each is trained with 5 different random seeds, to show how much the
+results wobble.
+
+The scaler that puts all features on the same scale learns only from the
+training windows. That is rule 1 of the project: never let the test set
+leak into training in any form.
+
+Scores:
+- **Macro-F1:** how well each class is caught, without false alarms,
+  averaged so that all four classes count equally. 1.0 is perfect; about
+  0.25 is guessing.
+- **Balanced accuracy:** the share of each class recognised, averaged
+  equally over the classes.
+
+The results go into `results/` (see the table below), including a chart
+and confusion matrices. A confusion matrix shows, for each true class, what
+the model said it was.
+
 **`src/bearing_physics.py`: the pencil-and-paper part.**
 Run with `python -m src.bearing_physics`. It calculates the bearing fault
 frequencies (FTF, BPFO, BPFI, BSF) from the ball count and dimensions,
@@ -185,6 +276,20 @@ Each line of output is one check, ending in `ok` or `FAIL`. Examples:
   files have practically nothing left above 5.2 kHz? (`test_load_data.py`
   also checks the filter itself: unchanged below 4.8 kHz, at least 120 dB
   down above 5.2 kHz, and no time shift.)
+- `test_splits.py`: the proof that the exams are set fairly.
+  - No window is ever in both the training and the test set.
+  - In protocols B and C no faulty recording is either.
+  - In C the held-out fault size never appears in training.
+  - It also proves the leak in protocol A really exists: every recording
+    is on both sides.
+- `test_run_experiments.py`:
+  - The scaler learns only from training data.
+  - Scrambling the test answers does not change a single prediction, which
+    shows the models never see them.
+- `test_features.py`: does a sine wave of amplitude 2 give RMS 1.414,
+  crest factor 1.414 and kurtosis 1.5, as the textbook says?
+- `test_segment.py`: are windows cut back to back, with no sample used
+  twice?
 
 Most tests use small made-up signals where the right answer is known in
 advance. That is the same idea as checking a gauge against a reference
@@ -204,6 +309,9 @@ the code or `config.py` and re-run instead.
 | `band_edge_by_file.csv`, `band_edge_filters.csv`, `figures/band_edge.png` | `check_band_edge.py` |
 | `fault_signatures.csv`, `figures/fault_signatures_overview.png` | `check_fault_signatures.py` |
 | `fault_frequencies.csv` | `bearing_physics.py` |
+| `results_f1.csv`: headline scores, protocol × model | `run_experiments.py` |
+| `results_f1_runs.csv`, `results_f1_by_group.csv`, `results_f1_by_fold.csv`, `confusion_matrices_f1.csv` | `run_experiments.py` |
+| `figures/f1_macro_f1_by_protocol.png`, `figures/f1_confusion_*.png` | `run_experiments.py` |
 
 ### `docs/`: the write-ups
 
@@ -251,7 +359,13 @@ Open a terminal in the project folder and run these one at a time.
    python -m src.check_fault_signatures
    ```
 
-7. Run all the tests:
+7. Run the leakage experiment (about 2 minutes):
+
+   ```bash
+   python -m src.run_experiments
+   ```
+
+8. Run all the tests:
 
    ```bash
    python -m unittest discover -s tests -v

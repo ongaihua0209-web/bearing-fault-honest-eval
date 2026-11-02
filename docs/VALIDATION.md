@@ -1,4 +1,4 @@
-# Validation: version 3.1 (2026-11-02, all 40 files)
+# Validation: version 4 (2026-11-02, all 40 files)
 
 This document holds the evidence that each step of the project does what it
 claims. Every number here comes from a script in `src/` and is checked by a
@@ -11,6 +11,8 @@ test in `tests/`.
 - the decision to keep CWRU's labels is recorded (section 4.3);
 - v3.1: everything is checked against CWRU's official website (section
   1.3). The rig-wide peaks in section 4.1 are now explained.
+- v4: the three train/test protocols, the generic-feature baseline and the
+  leakage measurement (section 5).
 
 Version 2 covered all 40 files, settled the two normal-file questions and
 added the quarter-order sampling-rate test. Version 2.1 added the 5 kHz
@@ -51,7 +53,7 @@ All 40 files are present and readable.
      The copy is reported and ignored, so no file is excluded.
    - 99's own signal is different from every other signal.
    - The srigas `CWRU_Bearing_NumPy` repository reports the same
-     duplicate independently (see section 5).
+     duplicate independently (see section 6).
    - 99.mat also contains a stray MATLAB variable called `ans`, which is
      harmless.
 2. **There are no other duplicates.** Every drive-end variable in all 40
@@ -201,7 +203,7 @@ Source: `python -m src.check_sampling_rate`, tested in
 ### 3.1 The question
 
 CWRU's fault data is drive-end at 12 kHz. Published sources disagree on
-whether the normal baseline is 12 kHz or 48 kHz (section 5). If one class
+whether the normal baseline is 12 kHz or 48 kHz (section 6). If one class
 were at a different rate, a classifier could learn the recording rate
 instead of the fault. That would be a leakage shortcut.
 
@@ -506,7 +508,7 @@ sharp fault line with this method", not "no fault".**
   0.395-0.398× with evidence 6-12, but FTF also appears in non-ball files
   (outer-race file 130: 39), so it is not a ball-specific sign.
 - This agrees with secondary reports of Smith & Randall's benchmark: ball
-  faults are by far the hardest CWRU faults to diagnose (section 5).
+  faults are by far the hardest CWRU faults to diagnose (section 6).
 
 ![Envelope spectra of all 40 files](../results/figures/fault_signatures_overview.png)
 
@@ -531,7 +533,151 @@ Consequences for reporting:
   rather than the fault. The latter is the leakage this project sets out
   to show.
 
-## 5. Related sources
+## 5. Train/test protocols and the generic-feature baseline (feature set F1)
+
+Sources: `src/segment.py`, `src/splits.py`, `src/features.py` and
+`src/run_experiments.py`, tested in `tests/test_segment.py`,
+`test_splits.py`, `test_features.py` and `test_run_experiments.py`.
+Results are in `results/results_f1*.csv` and `results/confusion_matrices_f1.csv`.
+
+### 5.1 Setup (fixed before any result was seen)
+
+- **Windows:** 2048 samples (0.17 s), back to back with no overlap. That
+  gives 2331 windows: 206 normal, 709 inner race, 708 ball and 708 outer
+  race. File 97 gives 29 windows; every other file gives 59-60.
+- **Label:** fault location (4 classes).
+- **Features:** feature set F1, seven time-domain statistics: RMS, peak,
+  peak-to-peak, crest factor, kurtosis, skewness and std. Signals come from
+  `load_signal()`, so only 0-5.2 kHz is present, where the two recording
+  chains are alike (section 3.5).
+- **Models:** scikit-learn logistic regression, random forest (300 trees)
+  and gradient boosting, all at default settings with no tuning.
+  - Each is a pipeline in which the scaler is fitted on training data only.
+  - Training windows are weighted 1 / (class share), using training labels
+    only, so the smaller healthy class counts equally.
+- **Seeds:** 0-4.
+  - Protocol A draws a new random split for each seed.
+  - In B and C the split is fixed and the seed changes only the models'
+    own randomness. Logistic regression has none, so its spread there is 0.
+- **Scores:** macro-F1 and balanced accuracy, mean ± std over seeds. In C
+  each seed is first averaged over its 3 folds.
+- **Run time:** about 105 s on a 4-core CPU (the limit is 15 minutes). A
+  re-run gives identical numbers.
+
+### 5.2 What each protocol shares between training and test
+
+| Protocol | Train / test windows | Same window? | Same recording? | Same physical bearing? | Same load? | Same fault size? |
+|---|---|---|---|---|---|---|
+| A: random 80/20 | 1864 / 467 | no | **yes, all 40** | yes | yes | yes |
+| B: train 0-2 HP, test 3 HP | 1740 / 591 | no | no | **yes, every class** | no | yes |
+| C: hold out one fault size (3 folds) | about 1564 / 767 per fold | no | no | **healthy class only** | partly | no (faulty classes) |
+
+Notes:
+- **Protocol B leaks bearings.** CWRU's site says each faulted bearing was
+  "reinstalled into the test motor and vibration data was recorded for
+  motor loads of 0 to 3 horsepower". So every test bearing in B was also
+  seen in training, at another load.
+- **In protocol C the healthy class shares a bearing.** The healthy class
+  has no fault size. Each fold therefore holds out one healthy load
+  instead: 1 HP (98) with 0.007, 2 HP (99) with 0.014 and 3 HP (100) with
+  0.021. File 97 stays in training because it is only 5 s long. **The
+  healthy test windows come from the same physical bearing as the healthy
+  training windows**, just a different recording at a different load.
+- **What the tests prove:**
+  - no window is in both training and test, under any protocol or fold;
+  - in B and C, no faulty recording is either;
+  - in C, the held-out fault size never appears in training and every
+    fault type is tested;
+  - in A, all 40 recordings appear on both sides. That demonstrates the
+    leak itself.
+
+### 5.3 Headline results
+
+| Protocol | Logistic regression | Random forest | Gradient boosting |
+|---|---|---|---|
+| A: random (leaky) | 0.854 ± 0.011 | **0.986 ± 0.003** | 0.981 ± 0.005 |
+| B: unseen load | 0.763 ± 0.000 | **0.968 ± 0.001** | 0.959 ± 0.001 |
+| C: unseen fault size | **0.504 ± 0.000** | 0.458 ± 0.004 | 0.460 ± 0.001 |
+
+Macro-F1, mean ± std over 5 seeds. Balanced accuracy follows the same
+pattern: A 0.86-0.99, B 0.77-0.97, C 0.56-0.58. Guessing scores about 0.25.
+
+**Leakage inflates the random forest's macro-F1 from 0.46 to 0.99.** Most
+of that inflation survives protocol B (0.97), because B still tests on
+bearings the model has studied.
+
+![Macro-F1 by protocol and model](../results/figures/f1_macro_f1_by_protocol.png)
+
+**Protocol C by held-out fault size** (macro-F1, mean over seeds):
+
+| Held out | Logistic regression | Random forest | Gradient boosting |
+|---|---|---|---|
+| 0.007 in | 0.46 | 0.42 | 0.42 |
+| 0.014 in | 0.33 | 0.32 | 0.32 |
+| 0.021 in | 0.72 | 0.64 | 0.64 |
+
+### 5.4 Per class and per fault size (required by section 4.3)
+
+Each figure is the share of test windows classified correctly (mean over
+seeds), for random forest / gradient boosting / logistic regression.
+\* marks the groups flagged in section 4.3, where the envelope check found
+no matching signature.
+
+| Group | A | B | C |
+|---|---|---|---|
+| Normal | 1.00 / 1.00 / 1.00 | 1.00 / 1.00 / 1.00 | 1.00 / 1.00 / 1.00 |
+| Inner race 0.007 | 1.00 / 1.00 / 0.77 | 1.00 / 1.00 / 0.03 | **0.00 / 0.01 / 0.49** |
+| Inner race 0.014 | 0.99 / 0.99 / 1.00 | 0.92 / 0.81 / 0.95 | **0.00 / 0.00 / 0.17** |
+| Inner race 0.021 | 1.00 / 1.00 / 1.00 | 1.00 / 1.00 / 1.00 | **0.09 / 0.06 / 0.18** |
+| Ball 0.007 \* | 1.00 / 1.00 / 0.75 | 1.00 / 1.00 / 0.61 | 1.00 / 1.00 / 0.44 |
+| Ball 0.014 \* | 0.95 / 0.90 / 0.80 | 0.92 / 0.95 / 0.73 | 0.97 / 0.87 / 0.81 |
+| Ball 0.021 \* | 0.99 / 0.99 / 0.94 | 1.00 / 1.00 / 0.90 | 0.67 / 0.74 / 0.82 |
+| Outer race 0.007 | 1.00 / 1.00 / 1.00 | 1.00 / 1.00 / 1.00 | **0.00 / 0.00 / 0.00** |
+| Outer race 0.014 \* | 0.92 / 0.91 / 0.09 | 0.80 / 0.78 / 0.10 | **0.00 / 0.00 / 0.00** |
+| Outer race 0.021 | 0.99 / 0.99 / 1.00 | 0.98 / 0.97 / 0.98 | 0.99 / 1.00 / 1.00 |
+
+What this shows:
+1. **Under C, inner race collapses even where the physics is clearest.**
+   The inner-race files had the strongest envelope signatures of all
+   (BPFI evidence 83-265, section 4.2), yet random forest and gradient
+   boosting get only 0-9% of them right when the fault size is new. Generic
+   time-domain statistics capture "how loud and spiky" a recording is, and
+   that changes with fault size. They do not capture the fault rhythm,
+   which does not change. This is the gap physics-informed features are
+   meant to close.
+2. **"Ball" is the default answer, not a recognised fault.** Under C,
+   random forest predicts "ball" for 61% of all faulty test windows,
+   including 67% of inner-race windows. Gradient boosting does so for 55%
+   and logistic regression for 43%. Ball's high share correct (0.67-1.00)
+   therefore reflects the default, not ball-fault recognition. This agrees
+   with section 4.2: no ball file shows a ball signature.
+3. **Outer race is all or nothing.** 0.021 in transfers almost perfectly;
+   0.007 and 0.014 in score 0%.
+4. **Normal scores 1.00 everywhere, and that needs care.** The healthy
+   class always shares its single bearing between training and test, was
+   recorded differently (section 3.5), and is the quietest class. A perfect
+   score here does not show that healthy bearings are recognised in
+   general.
+5. **The simplest model generalises best.** Logistic regression is the
+   worst under A and B but the best under C (0.50 against 0.46). The
+   flexible tree models learn more of the recording-specific detail, which
+   helps when the test recording or bearing has been seen and hurts when it
+   has not.
+6. **Spread across seeds is tiny; spread across folds is large** (0.32-0.72
+   macro-F1). The uncertainty that matters comes from which bearings are
+   tested, not from the random seed. With only three faulty bearings per
+   fault type, that uncertainty cannot be reduced with this dataset.
+
+Confusion matrices: `results/confusion_matrices_f1.csv` holds every
+protocol and model, with counts summed over seeds and folds. The figures
+below show the model with the highest mean macro-F1 in each protocol. That
+model was picked on test scores, for display only, so its numbers are not
+an unbiased estimate; the table above reports all three models.
+
+![Protocol A, random forest](../results/figures/f1_confusion_A_random_forest.png)
+![Protocol C, logistic regression](../results/figures/f1_confusion_C_logistic_regression.png)
+
+## 6. Related sources
 
 - CWRU Bearing Data Center, the official data source (pages listed in
   section 1.3, read 2026-11-02).
@@ -557,7 +703,7 @@ Consequences for reporting:
 
 ---
 
-## 6. Open items
+## 7. Open items
 
 | Item | Status |
 |---|---|
@@ -574,3 +720,6 @@ Consequences for reporting:
 | Files match the official website | **checked**: 40/40 names and 40/40 sizes (section 1.3) |
 | Is the 6:00 outer-race position in the load zone? | official site contradicts itself (section 1.3) |
 | Read Smith & Randall (2015) in full | to do |
+| Train/test protocols A, B, C | **done** (section 5); B shares bearings, and C shares the healthy bearing |
+| Generic-feature baseline (F1) | **done**: macro-F1 0.99 (A) → 0.97 (B) → 0.46-0.50 (C) |
+| Physics-informed features under protocol C | next step. Inner race (0.00-0.09 under C with tree models) is the clearest test case |

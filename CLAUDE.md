@@ -120,7 +120,7 @@ standard BSF is 2.3567. See `docs/VALIDATION.md`.
 
 ## Repository structure
 
-Status as of 2026-11-01: [done] = exists, [planned] = not written yet.
+Status as of 2026-11-02: [done] = exists, [planned] = not written yet.
 
 ```
 bearing-fault-honest-eval/
@@ -139,30 +139,38 @@ bearing-fault-honest-eval/
 │   ├── bearing_physics.py        fault frequencies from geometry           [done]
 │   ├── check_fault_signatures.py envelope spectrum: does each file show
 │   │                             its labelled fault frequency?             [done]
-│   ├── segment.py                cut signals into fixed-length windows     [planned]
-│   ├── features_statistical.py   generic features (RMS, kurtosis, ...)     [planned]
-│   ├── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
-│   ├── splits.py                 leaky vs honest train/test splits         [planned]
-│   └── evaluate.py               train models, score, save results         [planned]
-├── tests/                        one test file per src module              [done for 6 modules]
+│   ├── segment.py                2048-sample non-overlapping windows       [done]
+│   ├── features.py               feature set F1: 7 generic statistics      [done]
+│   ├── splits.py                 protocols A random, B load, C fault size  [done]
+│   ├── run_experiments.py        3 models x 3 protocols x 5 seeds          [done]
+│   └── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
+├── tests/                        one test file per src module              [done for 10 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v3.1]
-    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v2]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v4]
+    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v4]
 ```
 
-### Planned approach (subject to the owner's decisions)
+### Approach
 
-1. **Leaky baseline:** cut each recording into windows and split the windows
-   randomly. Windows from the same 10-second recording land on both sides.
-   Expect inflated accuracy.
-2. **Honest splits:** split by recording. In CWRU each (fault, size, load)
-   combination is a single recording, so "unseen recording" means "unseen
-   load". Main test: leave one load out (train on 3 loads, test on the 4th).
-   Harder test: leave one fault size out.
-3. **Features:** generic statistical features compared with physics-informed
-   features (envelope-spectrum energy at fault frequencies, normalised by
-   shaft speed), both under the honest splits.
+Windows are 2048 samples with no overlap. The label is the fault location
+(4 classes). Scores are macro-F1 and balanced accuracy, mean ± std over
+seeds 0-4, always also reported per class and per fault size.
+
+1. **Protocol A, random 80/20 (leaky by design)** [done]. Every recording
+   is on both sides. F1 baseline: macro-F1 0.85-0.99.
+2. **Protocol B, train 0-2 HP and test 3 HP** [done]. No recording is
+   shared, **but every physical bearing is**: each CWRU fault is one
+   bearing recorded at all four loads. F1 baseline: 0.76-0.97.
+3. **Protocol C, hold out one fault size (3 folds)** [done]. Faulty test
+   bearings are unseen. The healthy class holds out one load per fold
+   (98, 99, 100), so it **still shares its single bearing**. F1 baseline:
+   0.46-0.50. This is the honest benchmark.
+4. **Physics-informed features** [planned], compared with F1 under B and C.
+   Consider band energy around BSF and 2×BSF, not only sharp peaks
+   (docs/VALIDATION.md 4.2).
+
+Results: docs/VALIDATION.md section 5 and `results/results_f1*.csv`.
 
 ## How to run
 
@@ -175,5 +183,6 @@ python -m src.load_data              # manifest + data-quality report
 python -m src.check_sampling_rate    # sampling-rate check + plots
 python -m src.check_band_edge        # 5 kHz low-pass check + plot
 python -m src.check_fault_signatures # envelope label check + plot
+python -m src.run_experiments        # leakage experiment, about 2 minutes
 python -m unittest discover -s tests -v
 ```
