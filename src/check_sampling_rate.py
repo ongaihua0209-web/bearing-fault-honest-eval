@@ -96,15 +96,20 @@ def amplitude_spectrum(signal, fs):
     return frequencies, amplitudes
 
 
-def peak_strength(frequencies, amplitudes, expected_hz):
+def peak_strength(frequencies, amplitudes, expected_hz,
+                  tolerance=SEARCH_TOLERANCE, span=BACKGROUND_SPAN):
     """
     How clearly does a peak stand out near expected_hz?
+
+    Looks within +/- tolerance (a fraction, e.g. 0.03 = 3%) of expected_hz
+    for the biggest value, and divides it by the median level within
+    +/- span around it. Also used by check_fault_signatures.py.
 
     Returns (frequency_of_biggest_value_nearby, ratio_to_background).
     """
     distance = np.abs(frequencies - expected_hz)
-    near = distance <= SEARCH_TOLERANCE * expected_hz
-    background = (distance <= BACKGROUND_SPAN * expected_hz) & ~near
+    near = distance <= tolerance * expected_hz
+    background = (distance <= span * expected_hz) & ~near
 
     nearby_amps = np.where(near, amplitudes, -np.inf)
     i = int(np.argmax(nearby_amps))

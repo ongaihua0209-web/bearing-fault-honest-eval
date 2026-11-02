@@ -3,6 +3,72 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 3 (2026-11-02): envelope label check; CWRU labels kept
+
+Owner decisions:
+- keep CWRU's labels exactly as published;
+- turn the exploratory envelope check into a tested script.
+
+No models trained.
+
+### Added / changed
+- `src/check_fault_signatures.py` (new): envelope analysis for every file.
+  - **Band choice:** the spikiest (highest-kurtosis) of nine 1.2 kHz bands
+    between 0.4 and 4.8 kHz, plus a fixed 2.0-4.8 kHz band as a second
+    opinion.
+  - **Evidence:** peak/background at BPFO, BPFI and BSF/2×BSF; a type is
+    clear at 10 or more.
+  - **Verdict per file:** matches label, looks like X, or no signature.
+  - **Rules:** fixed and tested on synthetic signals before the first run
+    on real data.
+  - **Sensitivity check:** a ±1% window, added after the first run (see
+    Found). The CSV also records where each peak was found.
+- `src/check_sampling_rate.py`: `peak_strength()` now takes the window
+  sizes as optional arguments. Its default behaviour is unchanged.
+- `tests/test_fault_signatures.py` (new, 15 tests). They cover:
+  - synthetic outer-race, inner-race and ball signals, a mislabelled
+    signal, and noise;
+  - band choice ignoring a loud hum;
+  - the verdict rules and the window widths;
+  - positive controls on real data (inner race 0.007, outer race 0.007,
+    normal).
+
+  The total is 68 tests, all passing. One synthetic test was corrected
+  before the real run: its signal was unrealistically noise-free, and it is
+  now realistically noisy. The method was not changed.
+- `src/config.py` comment, `CLAUDE.md` (label decision, per-class
+  reporting rule), `docs/VALIDATION.md` v3 (sections 4.2 and 4.3 rewritten),
+  `docs/HOW_IT_WORKS.md` v3.
+
+### Found
+- **26 of 40 files match their label:** all normal, all 12 inner race,
+  outer race 0.007 and 0.021, plus 199 (outer race 0.014) and 120 (ball
+  0.007).
+- **Ball:** no sharp ball line in any of the 12 files.
+  - 0.021: all 4 look like inner race.
+  - 0.014: no signature in any of the 4.
+  - 0.007: mixed outer-race and inner-race evidence.
+- **Outer race 0.014:** 1 of 4 matches; 197 and 198 look like inner race,
+  and 200 shows nothing.
+- **Window overlap.** "Ball" evidence in the inner-race and outer-race files
+  is not real ball evidence. It comes from peaks at 2.40× (the inner-race
+  sideband BPFI − 3×) and 4.79-4.80×, sitting at the edges of the ±2% ball
+  windows.
+  - A ±1% window removes them and changes exactly one verdict: ball 120
+    goes from "match" to "looks like outer + inner race".
+  - Under the narrow window, 0 of 12 ball files match.
+- **Broad humps.** Ball files 222 and 223 show broad humps near BSF and
+  2×BSF, which the sharp-peak measure cannot detect. So "no signature"
+  does not mean "no fault".
+
+### Next steps
+1. Write `README.md`.
+2. Read Smith & Randall (2015) in full.
+3. Agree window length, overlap and split design before `segment.py` and
+   `splits.py`.
+4. When designing physics features, consider band energy around BSF and
+   2×BSF, which can see broad humps, instead of sharp-peak ratios only.
+
 ## Session 2b (2026-11-01): 5 kHz low-pass on every signal
 
 Owner decision: low-pass every signal at about 5 kHz, to remove the

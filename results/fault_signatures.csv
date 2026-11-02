@@ -1,0 +1,41 @@
+file_number,label,fault_size_in,load_hp,rpm,selected_band_hz,selected_band_kurtosis,sel_outer_race,sel_outer_race_at_order,sel_inner_race,sel_inner_race_at_order,sel_ball,sel_ball_at_order,sel_cage_FTF,sel_cage_FTF_at_order,fix_outer_race,fix_outer_race_at_order,fix_inner_race,fix_inner_race_at_order,fix_ball,fix_ball_at_order,fix_cage_FTF,fix_cage_FTF_at_order,clear_types,verdict,clear_types_narrow,verdict_narrow
+97,normal,0.0,0,1796.0,2000-3200,0.25,2.2,3.563,4.1,5.397,2.2,4.766,2.1,0.401,2.1,3.563,2.6,5.436,2.7,2.36,1.7,0.394,none,matches label,none,matches label
+98,normal,0.0,1,1772.0,2800-4000,0.85,3.4,3.597,3.7,5.401,2.9,2.401,5.5,0.4,1.7,3.597,4.5,5.404,3.2,4.638,2.6,0.4,none,matches label,none,matches label
+99,normal,0.0,2,1750.0,2400-3600,0.9,3.9,3.596,4.7,5.401,2.4,2.402,2.3,0.4,2.9,3.61,2.2,5.323,2.5,4.801,2.5,0.397,none,matches label,none,matches label
+100,normal,0.0,3,1725.0,2400-3600,0.49,6.1,3.596,2.9,5.401,2.1,4.73,3.6,0.402,4.0,3.596,3.2,5.421,3.9,4.72,2.0,0.402,none,matches label,none,matches label
+105,inner_race,0.007,0,1797.0,2400-3600,2.4,4.0,3.598,228.9,5.399,12.2,4.801,9.6,0.4,4.2,3.598,227.4,5.399,14.2,4.798,8.9,0.4,inner_race + ball,matches label,inner_race,matches label
+106,inner_race,0.007,1,1772.0,2800-4000,2.5,4.8,3.601,162.0,5.402,22.5,2.401,3.2,0.4,2.8,3.601,265.2,5.402,22.2,4.803,8.8,0.4,inner_race + ball,matches label,inner_race,matches label
+107,inner_race,0.007,2,1748.0,2800-4000,2.95,4.0,3.602,179.6,5.403,23.2,2.401,3.3,0.398,1.9,3.561,256.6,5.403,15.9,4.802,8.7,0.401,inner_race + ball,matches label,inner_race,matches label
+108,inner_race,0.007,3,1721.0,2800-4000,3.32,6.0,3.598,181.0,5.402,29.5,2.4,4.6,0.398,5.8,3.598,211.6,5.402,25.8,2.4,6.2,0.398,inner_race + ball,matches label,inner_race,matches label
+169,inner_race,0.014,0,1796.0,2000-3200,23.22,4.6,3.616,136.2,5.412,4.8,4.804,4.8,0.392,9.6,3.609,114.5,5.412,5.1,4.619,3.6,0.398,inner_race,matches label,inner_race,matches label
+170,inner_race,0.014,1,1774.0,2000-3200,19.64,7.8,3.584,94.3,5.413,13.5,2.352,4.3,0.396,9.2,3.614,91.7,5.413,9.9,2.352,4.8,0.4,inner_race + ball,matches label,inner_race + ball,matches label
+171,inner_race,0.014,2,1752.0,2000-3200,19.43,8.8,3.585,83.1,5.413,2.9,2.324,4.6,0.398,7.3,3.609,79.2,5.413,2.8,4.796,6.6,0.398,inner_race,matches label,inner_race,matches label
+172,inner_race,0.014,3,1728.0,3600-4800,20.65,3.9,3.609,85.2,5.413,4.9,2.397,2.2,0.397,7.4,3.615,73.0,5.413,4.0,2.397,1.7,0.394,inner_race,matches label,inner_race,matches label
+209,inner_race,0.021,0,1797.0,3600-4800,6.9,4.8,3.592,129.4,5.403,16.0,2.401,5.5,0.397,4.2,3.618,171.6,5.403,15.3,2.401,8.2,0.4,inner_race + ball,matches label,inner_race,matches label
+210,inner_race,0.021,1,1774.0,3600-4800,4.91,7.3,3.593,108.4,5.406,10.7,2.401,10.4,0.404,3.8,3.596,148.9,5.406,10.1,2.401,8.0,0.404,inner_race + ball,matches label,inner_race,matches label
+211,inner_race,0.021,2,1752.0,2400-3600,4.97,5.6,3.595,157.1,5.403,30.3,2.401,17.1,0.405,5.7,3.595,156.4,5.403,30.5,2.401,16.8,0.405,inner_race + ball,matches label,inner_race,matches label
+212,inner_race,0.021,3,1728.0,3600-4800,5.5,8.7,3.593,124.2,5.403,20.8,2.401,10.0,0.403,6.6,3.593,136.8,5.403,30.0,2.401,14.5,0.403,inner_race + ball,matches label,inner_race,matches label
+118,ball,0.007,0,1796.0,1600-2800,0.22,22.3,3.598,3.1,5.446,5.6,4.795,4.1,0.402,9.8,3.598,9.8,5.4,9.5,2.401,11.6,0.402,outer_race,looks like outer_race,outer_race,looks like outer_race
+119,ball,0.007,1,1772.0,1600-2800,0.25,21.0,3.598,3.9,5.398,5.2,2.4,7.3,0.402,9.9,3.598,11.4,5.398,7.1,2.4,2.6,0.402,outer_race + inner_race,looks like outer_race + inner_race,outer_race + inner_race,looks like outer_race + inner_race
+120,ball,0.007,2,1748.0,400-1600,0.18,9.2,3.592,7.3,5.473,9.0,2.358,1.5,0.403,22.9,3.602,21.6,5.401,10.3,2.399,11.1,0.4,outer_race + inner_race + ball,matches label,outer_race + inner_race,looks like outer_race + inner_race
+121,ball,0.007,3,1722.0,3600-4800,0.09,7.0,3.598,4.0,5.4,6.9,2.401,6.4,0.402,4.2,3.598,11.8,5.4,4.1,2.397,7.2,0.399,inner_race,looks like inner_race,inner_race,looks like inner_race
+185,ball,0.014,0,1796.0,2000-3200,22.91,2.1,3.576,2.1,5.343,3.4,4.731,5.8,0.395,2.1,3.576,2.0,5.307,3.6,4.731,5.7,0.395,none,no signature,none,no signature
+186,ball,0.014,1,1772.0,3600-4800,13.25,3.0,3.556,3.0,5.33,2.8,4.741,6.7,0.396,2.8,3.556,2.7,5.33,3.2,4.741,7.7,0.396,none,no signature,none,no signature
+187,ball,0.014,2,1749.0,2000-3200,12.07,2.2,3.611,2.5,5.366,3.8,4.711,10.8,0.398,2.2,3.543,2.7,5.322,3.0,4.711,12.2,0.398,none,no signature,none,no signature
+188,ball,0.014,3,1724.0,3200-4400,22.17,1.9,3.631,2.6,5.488,4.2,2.38,10.6,0.397,1.9,3.601,2.2,5.488,3.8,2.38,8.7,0.397,none,no signature,none,no signature
+222,ball,0.021,0,1796.0,2000-3200,10.89,3.9,3.592,9.9,5.409,6.1,4.709,1.3,0.391,3.3,3.592,15.6,5.409,6.4,4.686,1.4,0.404,inner_race,looks like inner_race,inner_race,looks like inner_race
+223,ball,0.021,1,1774.0,2000-3200,11.46,4.6,3.592,11.0,5.406,5.9,4.689,2.9,0.4,4.4,3.592,14.5,5.406,6.0,4.649,1.2,0.404,inner_race,looks like inner_race,inner_race,looks like inner_race
+224,ball,0.021,2,1754.0,2800-4000,0.66,8.7,3.589,20.6,5.401,6.9,2.403,1.5,0.393,8.8,3.589,22.7,5.401,7.1,2.403,1.5,0.393,inner_race,looks like inner_race,inner_race,looks like inner_race
+225,ball,0.021,3,1729.0,2800-4000,0.68,7.2,3.59,19.3,5.404,6.2,2.404,3.1,0.406,7.7,3.59,23.4,5.404,5.6,2.404,2.6,0.406,inner_race,looks like inner_race,inner_race,looks like inner_race
+130,outer_race,0.007,0,1796.0,1200-2400,5.07,173.0,3.595,4.0,5.34,7.9,2.402,15.4,0.404,757.6,3.595,2.5,5.406,18.8,4.791,38.9,0.404,outer_race + ball,matches label,outer_race,matches label
+131,outer_race,0.007,1,1773.0,3600-4800,4.98,501.4,3.596,8.8,5.397,14.8,4.793,34.3,0.401,671.8,3.596,10.9,5.397,26.6,4.793,61.2,0.401,outer_race + inner_race + ball,matches label,outer_race + inner_race + ball,matches label
+132,outer_race,0.007,2,1750.0,3600-4800,4.69,432.8,3.599,13.5,5.402,20.1,4.792,33.1,0.403,551.2,3.599,17.3,5.402,29.6,4.792,44.4,0.403,outer_race + inner_race + ball,matches label,outer_race + inner_race,matches label
+133,outer_race,0.007,3,1725.0,3600-4800,4.06,397.6,3.596,11.5,5.391,11.1,4.791,26.0,0.402,650.1,3.596,13.2,5.401,23.5,4.791,36.8,0.402,outer_race + inner_race + ball,matches label,outer_race + inner_race,matches label
+197,outer_race,0.014,0,1796.0,3600-4800,0.15,5.0,3.609,9.6,5.386,4.2,2.339,6.0,0.401,5.3,3.593,13.1,5.386,6.1,4.79,3.6,0.401,inner_race,looks like inner_race,inner_race,looks like inner_race
+198,outer_race,0.014,1,1772.0,2000-3200,0.03,7.8,3.61,3.5,5.389,6.3,2.402,4.4,0.403,5.1,3.613,16.9,5.389,2.9,2.392,6.3,0.403,inner_race,looks like inner_race,inner_race,looks like inner_race
+199,outer_race,0.014,2,1749.0,2000-3200,0.13,14.6,3.608,2.3,5.399,5.2,2.338,4.0,0.402,7.6,3.608,13.7,5.385,5.6,2.389,10.9,0.402,outer_race + inner_race,matches label,outer_race + inner_race,matches label
+200,outer_race,0.014,3,1723.0,3200-4400,1.83,3.0,3.583,7.1,5.385,4.2,2.388,3.2,0.401,3.3,3.545,8.0,5.385,4.2,2.388,3.4,0.401,none,no signature,none,no signature
+234,outer_race,0.021,0,1796.0,3600-4800,19.93,60.4,3.592,3.2,5.396,3.0,2.397,5.9,0.406,93.8,3.592,3.2,5.403,3.6,4.778,12.9,0.406,outer_race,matches label,outer_race,matches label
+235,outer_race,0.021,1,1771.0,3600-4800,20.01,67.8,3.593,4.6,5.399,4.8,2.399,4.8,0.397,99.6,3.593,4.3,5.399,5.0,2.399,7.2,0.403,outer_race,matches label,outer_race,matches label
+236,outer_race,0.021,2,1748.0,3600-4800,21.37,62.5,3.591,3.2,5.396,3.1,2.402,3.6,0.397,91.3,3.591,4.3,5.403,4.5,4.776,10.9,0.404,outer_race,matches label,outer_race,matches label
+237,outer_race,0.021,3,1721.0,3600-4800,23.93,65.4,3.591,4.4,5.398,4.1,2.373,5.1,0.405,88.9,3.591,4.9,5.405,3.7,2.401,11.9,0.405,outer_race,matches label,outer_race,matches label

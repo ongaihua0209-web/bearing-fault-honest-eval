@@ -87,6 +87,10 @@ CWRU_PUBLISHED_MULTIPLIERS = {
 # fault_size_in is the fault diameter in inches (0.0 means no fault).
 # All outer-race faults in this set are at the 6 o'clock position (the
 # centre of the load zone).
+#
+# These are CWRU's labels, kept exactly as published (owner decision,
+# 2026-11-02) - even for the 14 files where src/check_fault_signatures.py
+# does not find the labelled fault. See docs/VALIDATION.md 4.2-4.3.
 # ---------------------------------------------------------------------------
 FILE_GROUPS = [
     # (fault_location, fault_size_in, [files for 0 HP, 1 HP, 2 HP, 3 HP])

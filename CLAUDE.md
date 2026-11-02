@@ -89,8 +89,15 @@ every decision in plain English.
 readable. Known issues and evidence are in `docs/VALIDATION.md`:
 - the normal class was recorded differently (48 kHz, no BA channel, 97 is
   only 5 s long). That is a leakage risk;
-- an exploratory envelope check finds no clear labelled-fault signature in
-  the 12 ball files or the 4 outer-race 0.014 in files.
+- the envelope label check (`src/check_fault_signatures.py`) finds the
+  labelled fault in 26 of 40 files. It finds no sharp ball line in any of
+  the 12 ball files (ball 0.021 looks like inner race), and only 1 of the
+  4 outer-race 0.014 in files matches.
+
+**Labels: CWRU's labels are kept exactly as published** (owner decision,
+2026-11-02), even where the label check disagrees. Every result must be
+reported **per class** (and per fault size), with the ball and outer-race
+0.014 in groups flagged (docs/VALIDATION.md 4.3).
 
 ### Bearing
 
@@ -120,16 +127,16 @@ bearing-fault-honest-eval/
 │   │                             the band edge across classes            [done]
 │   ├── bearing_physics.py        fault frequencies from geometry           [done]
 │   ├── check_fault_signatures.py envelope spectrum: does each file show
-│   │                             its labelled fault frequency?             [planned]
+│   │                             its labelled fault frequency?             [done]
 │   ├── segment.py                cut signals into fixed-length windows     [planned]
 │   ├── features_statistical.py   generic features (RMS, kurtosis, ...)     [planned]
 │   ├── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
 │   ├── splits.py                 leaky vs honest train/test splits         [planned]
 │   └── evaluate.py               train models, score, save results         [planned]
-├── tests/                        one test file per src module              [done for 5 modules]
+├── tests/                        one test file per src module              [done for 6 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v2]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v3]
     └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v2]
 ```
 
@@ -156,5 +163,6 @@ python -m src.bearing_physics        # fault-frequency table
 python -m src.load_data              # manifest + data-quality report
 python -m src.check_sampling_rate    # sampling-rate check + plots
 python -m src.check_band_edge        # 5 kHz low-pass check + plot
+python -m src.check_fault_signatures # envelope label check + plot
 python -m unittest discover -s tests -v
 ```

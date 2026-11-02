@@ -1,15 +1,18 @@
-# Validation: version 2.1 (2026-11-01, all 40 files)
+# Validation: version 3 (2026-11-02, all 40 files)
 
 This document holds the evidence that each step of the project does what it
 claims. Every number here comes from a script in `src/` and is checked by a
-test in `tests/`, except where a section says **exploratory**.
+test in `tests/`.
 
-**Changes from version 1:**
-- covers all 40 files (version 1 had 5);
-- settles the two normal-file questions;
-- adds a second test to the sampling-rate check (section 3.2);
-- extends the exploratory label check to every file (section 4);
-- v2.1 adds the 5 kHz low-pass, with its evidence (section 3.5).
+**Changes from version 2.1:**
+- the label check is now a tested script, `src/check_fault_signatures.py`,
+  with a data-driven band choice. It replaces the exploratory one-off
+  calculation, and section 4.2 is rewritten from its results;
+- the decision to keep CWRU's labels is recorded (section 4.3).
+
+Version 2 covered all 40 files, settled the two normal-file questions and
+added the quarter-order sampling-rate test. Version 2.1 added the 5 kHz
+low-pass (section 3.5).
 
 ---
 
@@ -324,49 +327,142 @@ smaller neighbours at about 4.93× and 6.40×.
 anything apart in this data. Physics-informed features must use the
 envelope spectrum.
 
-### 4.2 Does each file show its labelled fault? (exploratory)
+### 4.2 Does each file show its labelled fault?
 
-> **Exploratory:** these numbers come from a one-off script with a single
-> fixed band (band-pass 2-5 kHz, Hilbert envelope). It is **not in the repo
-> yet**. A different band could reveal signatures this one misses, so
-> "no signature found" does not mean "no fault".
+Source: `python -m src.check_fault_signatures`, tested in
+`tests/test_fault_signatures.py`. Results are in
+`results/fault_signatures.csv`, and the figure is
+`results/figures/fault_signatures_overview.png`.
 
-Each number is the envelope-spectrum peak-to-background ratio at the
-labelled fault frequency (±2%), using the same "10 or more = clear" rule as
-section 3.
+**Method.** This is envelope analysis, explained in plain English at the
+top of the script.
+1. **Pick the band.** The band is chosen by **kurtosis**, which measures
+   how spiky a signal is. The script tries nine overlapping 1.2 kHz bands
+   between 0.4 and 4.8 kHz and keeps the spikiest one. This is the idea
+   behind spectral kurtosis and the kurtogram, in its simplest form. It
+   uses the signal only, never the label.
+2. **Get a second opinion.** A fixed wide band (2.0-4.8 kHz) is analysed
+   as well, so one unlucky band choice cannot hide a fault.
+3. **Measure the evidence.** For each fault type, the evidence is the
+   envelope peak divided by the background around it:
+   - outer race: BPFO;
+   - inner race: BPFI;
+   - ball: BSF or 2×BSF, whichever is stronger.
 
-| Group | Envelope result | Matches label? |
-|---|---|---|
-| Normal (97-100) | no fault-frequency peaks (ratios 2-5); strongest components at 4× and 8× shaft speed | ✓ no fault seen |
-| Inner race 0.007 (105-108) | BPFI 212-264 | ✓ clear |
-| Inner race 0.014 (169-172) | BPFI 73-115 | ✓ clear |
-| Inner race 0.021 (209-212) | BPFI 136-171 | ✓ clear |
-| Outer race 0.007 (130-133) | BPFO 549-753 | ✓ very clear |
-| Outer race 0.014 (197-200) | **BPFO 3-8** | ✗ **no BPFO signature** |
-| Outer race 0.021 (234-237) | BPFO 89-99 | ✓ clear |
-| Ball 0.007 (118-121) | BSF 4-10, 2×BSF 4-6; weak mixed peaks near BPFO and BPFI (4-23) | ✗ no ball signature |
-| Ball 0.014 (185-188) | all fault frequencies ≤ 4; strongest components at 0.39-0.40× (= FTF, the cage speed) and 0.61×, 1.19× | ~ indirect only: cage-rate modulation is typical of ball faults, but no BSF line |
-| Ball 0.021 (222-225) | BPFI 15-23 with peaks at 5.41×, 4.41×, 3.40× (BPFI and its shaft-speed sidebands); 2×BSF 3-6 | ✗ **looks like an inner-race fault** |
+   The peak is the largest value within ±2% of the fault frequency. The
+   background is the median within ±20% around it. A type is **clear** at
+   10 or more.
+4. **Give the verdict.**
+   - A fault file "matches label" if its own type is clear in either band.
+     It "looks like X" if only another type is clear, and has "no
+     signature" if nothing is clear.
+   - A normal file matches if nothing is clear.
 
-**Summary:**
-- **24 of 40 files clearly show what their label says**: all 4 normal, all
-  12 inner-race, and 8 of the 12 outer-race files.
-- **The 12 ball files and the 4 outer-race 0.014 in files do not.**
+**Fixed before looking.** The rules above were fixed and tested on
+synthetic signals before the script was run on real data. The positive
+controls were also written beforehand: inner race 0.007, outer race 0.007
+and normal must pass.
 
-This fits what the literature reports: ball faults are by far the hardest
-CWRU faults to diagnose, and several ball and 0.014 in outer-race defects
-are hard to find with envelope analysis (section 5).
+One test was corrected before the real data was run. My first synthetic
+band-choice test used an almost noise-free signal. In that case the method
+picked a band next to the resonance, because the sharp start of each impact
+is spikier than the steady ringing. With realistic noise it picks the
+resonance band. I changed the test signal to be realistically noisy, not
+the method.
 
-**Consequences for the project:**
-- Expect physics-informed features to work for inner race and outer race
-  0.007/0.021, and to struggle on ball and outer race 0.014. Under honest
-  splits that is a genuine result about the data, not a bug.
-- If a model scores near 100% on ball files, check whether it learned
-  something that is not ball-fault physics. Recognising the recording
-  itself is the obvious candidate, which is exactly the leakage this
-  project sets out to show.
+**Synthetic validation.** These are impact trains that ring a 3 kHz
+resonance, buried in noise at 0.3 against impacts of 1.
+- Outer-race, inner-race and ball signals are each identified correctly,
+  and only as that type.
+- An outer-race signal given a ball label is flagged "looks like outer
+  race".
+- Pure noise shows nothing.
+- With a loud 1 kHz hum added, the band choice still picks the
+  resonance, not the hum.
 
----
+**Results (primary rules).** Each figure is the evidence in the better of
+the two bands.
+
+| Group | BPFO (outer) | BPFI (inner) | Ball (BSF/2×BSF) | Verdicts |
+|---|---|---|---|---|
+| Normal | 2-6 | 3-5 | 2.5-4 | **4/4 match** (no fault seen) |
+| Inner race 0.007 | 4-6 | **212-265** | 14-30* | **4/4 match** |
+| Inner race 0.014 | 7-10 | **83-136** | 3-14* | **4/4 match** |
+| Inner race 0.021 | 5-9 | **137-172** | 11-31* | **4/4 match** |
+| Outer race 0.007 | **551-758** | 4-17 | 19-30* | **4/4 match** |
+| Outer race 0.014 | 3-15 | 8-17 | 4-6 | 1 match (199), 2 look like inner race (197, 198), 1 no signature (200) |
+| Outer race 0.021 | **89-100** | 3-5 | 4-5 | **4/4 match** |
+| Ball 0.007 | 7-23 | 10-22 | 7-10 | 1 match (120, see below), 1 looks like outer race (118), 1 outer + inner (119), 1 inner (121) |
+| Ball 0.014 | 2-3 | 2-3 | 3-4 | **0/4**: no signature in any |
+| Ball 0.021 | 4-9 | 15-23 | 6-7 | **0/4**: all look like inner race |
+
+**26 of 40 files match their label.** These are all 4 normal, all 12 inner
+race, 9 of 12 outer race and 1 of 12 ball.
+
+\* **Ball evidence in non-ball files comes from window overlap, not ball
+faults.** The CSV records where each peak was found:
+- In inner-race files the "ball" peak sits at **2.40×** shaft speed. That
+  is the sideband BPFI − 3× (measured BPFI 5.40×), at the very edge of the
+  ±2% BSF window (2.31-2.40×), not at BSF (2.357×).
+- In outer-race and inner-race files a further peak at **4.79-4.80×** sits
+  at the edge of the 2×BSF window (4.62-4.81×), not at 2×BSF (4.713×).
+
+**Sensitivity check, added after the first run.** Repeating the verdict
+with a ±1% window excludes those edge peaks. The window is still wider than
+the slip in the clean files (BPFO measured up to 3.61×, BPFI down to 5.40×).
+Exactly one verdict changes:
+- **Ball file 120 goes from "matches label" to "looks like outer race +
+  inner race".** Its only clear ball evidence (10.3) was a peak at 2.399×,
+  the inner-race sideband position.
+- Under the narrow window **25 of 40 files match, and 0 of 12 ball files
+  do.**
+
+The primary result stays the reported one, with this caveat attached.
+
+**What the figure shows that the numbers miss.** Ball files 222 and 223
+(0.021 in, 0 and 1 HP) have **broad humps** centred near BSF (2.36×) and
+2×BSF (4.71×), not sharp lines. Ball-fault energy often smears like this
+because the balls slip and their spin is not steady. The peak/background
+measure compares a sharp peak with its surroundings, so it is blind to a
+hump that fills those surroundings. **"No signature" therefore means "no
+sharp fault line with this method", not "no fault".**
+
+**Summary of the label check:**
+- **Normal, inner race (all sizes), outer race 0.007 and 0.021:** the physics
+  clearly supports the labels.
+- **Outer race 0.014:** 1 of 4 shows BPFO; two show inner-race-like
+  evidence instead.
+- **Ball:** no file shows a sharp ball line. The 0.021 in files show
+  inner-race-like lines (BPFI with shaft sidebands), and two of them also
+  show broad humps at BSF and 2×BSF. The 0.014 in files show only
+  low-frequency content. That includes a cage-speed (FTF) peak at
+  0.395-0.398× with evidence 6-12, but FTF also appears in non-ball files
+  (outer-race file 130: 39), so it is not a ball-specific sign.
+- This agrees with secondary reports of Smith & Randall's benchmark: ball
+  faults are by far the hardest CWRU faults to diagnose (section 5).
+
+![Envelope spectra of all 40 files](../results/figures/fault_signatures_overview.png)
+
+### 4.3 Decision: CWRU's labels are kept as published
+
+Owner decision, 2026-11-02. The 14 files above whose verdict is not "matches
+label" keep their CWRU labels:
+- 11 ball files: 118, 119, 121, all of 185-188 and all of 222-225;
+- 3 outer race 0.014 files: 197, 198 and 200.
+
+Why:
+- The project evaluates classifiers on the benchmark as it is published.
+  Relabelling it would make the results incomparable with the literature.
+- The check above has known blind spots: broad humps, and a single
+  envelope method.
+
+Consequences for reporting:
+- Every result will be broken down **per class** (and per fault size).
+- The ball and outer race 0.014 groups will be flagged alongside it.
+- A high score on those groups needs a closer look. Either the model found
+  something real that this check misses, or it recognises the recording
+  rather than the fault. The latter is the leakage this project sets out
+  to show.
 
 ## 5. Related sources
 
@@ -398,8 +494,11 @@ are hard to find with envelope analysis (section 5).
 |---|---|
 | Normal files 12 vs 48 kHz | **resolved: 48 kHz**, resampled to 12 kHz |
 | Duplicate normal file | **resolved**: copy of 98 inside 99.mat, reported and not used |
-| Envelope label check as a tested script | exploratory only; next step |
-| Band choice for the envelope check (fixed 2-5 kHz vs data-driven) | to decide with the script |
+| Envelope label check as a tested script | **done**: `src/check_fault_signatures.py` (section 4.2) |
+| Band choice for the envelope check | **done**: spikiest of nine 1.2 kHz bands (kurtosis), plus a fixed 2.0-4.8 kHz band |
+| Labels of the 14 files without a matching signature | **decided**: keep CWRU labels, report per class (section 4.3) |
+| Ball faults as broad humps, not sharp lines | not captured by the peak measure; consider a band-energy measure for physics features |
+| Peaks at 2.40× and 4.79-4.80× in non-ball files | explained for 2.40× (BPFI − 3×); 4.79-4.80× origin not established |
 | Low-pass all signals at about 5 kHz to remove the 48 kHz band-edge difference | **done**: 4.8/5.2 kHz FIR in `load_signal()`, verified on all 40 files |
 | Normal-only tones at 4.1-4.3 kHz (possible shortcut inside the kept band) | unexplained; watch for it in feature importance |
 | Cause of the rig-wide 5.40× raw-spectrum peak | unexplained |
