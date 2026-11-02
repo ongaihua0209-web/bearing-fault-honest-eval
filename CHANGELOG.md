@@ -3,6 +3,53 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 6 (2026-11-02): merged sessions 4-5; README
+
+Owner decisions:
+- keep F2 at 0-4.8 kHz;
+- merge sessions 4-5, done as PR #5 into `main`;
+- write the README next.
+
+### Added / changed
+- `README.md`: the portfolio front page. It covers:
+  - the question and the short answer;
+  - the leakage-gap chart;
+  - leakage explained;
+  - protocols A, B and C;
+  - the protocol-C results table and RQ1-RQ3;
+  - the envelope-spectrum figure;
+  - the data findings (48 kHz healthy files, band-edge filter, the 98/99
+    copy, labels, the official-site check);
+  - the evaluation rules, how to reproduce, a repository map, limits and
+    references.
+- `tests/test_readme.py` (new): the README's results table and protocol
+  table must match `results/results_all.csv`. A wrong number in the README
+  makes it fail (checked).
+- `CLAUDE.md`: README done, plus a rule to keep README and RESULTS in step
+  with the results. `docs/HOW_IT_WORKS.md`: README entry updated.
+- No code or results changed; the numbers are as in session 5.
+
+### Found
+- Fact-checking the first README draft against the results caught two of
+  my own errors before commit:
+  - it said the 0.007 in ball files look like inner race, but it is the
+    0.021 in files;
+  - it labelled the F1-only column "generic features", though F2 is
+    generic too.
+
+  Both are fixed, and the new test guards the numbers from now on.
+
+### Next steps
+1. Try band energy around BSF and 2×BSF, to catch the broad ball humps.
+   It must be fixed in advance and treated as a new feature set, not tuned
+   on test results.
+2. Consider a sensitivity analysis without the ambiguous groups (ball,
+   outer race 0.014). The labels stay unchanged.
+3. Read Smith & Randall (2015) in full.
+4. If the repository is or will be public, check that CWRU permits
+   redistributing its data files (`data/raw/`, 134 MB). This has not been
+   checked.
+
 ## Session 5 (2026-11-02): spectral and physics-informed features, full grid
 
 ### Added / changed

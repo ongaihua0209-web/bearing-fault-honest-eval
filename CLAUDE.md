@@ -51,6 +51,8 @@ every decision in plain English.
 - Files in `results/` are written by scripts. Never edit them by hand.
 - Report unexpected or negative findings in `docs/VALIDATION.md`. Do not
   hide them.
+- If results change, update `README.md` and `docs/RESULTS.md`;
+  `tests/test_readme.py` fails until the README's numbers match.
 - Simple and readable beats clever. One idea per function, with a comment
   saying *why*, not only *what*.
 
@@ -126,7 +128,7 @@ Status as of 2026-11-02: [done] = exists, [planned] = not written yet.
 bearing-fault-honest-eval/
 ├── CLAUDE.md                     project brief and rules (this file)       [done]
 ├── CHANGELOG.md                  what changed in each session              [done]
-├── README.md                     portfolio-facing summary                  [planned]
+├── README.md                     portfolio-facing summary                  [done]
 ├── requirements.txt              pinned library versions                   [done]
 ├── data/raw/                     CWRU .mat files, e.g. 105.mat             [40 of 40]
 ├── data/cwru_official_reference.csv  official names + sizes (read 2026-11-02) [done]
@@ -146,7 +148,8 @@ bearing-fault-honest-eval/
 │   ├── splits.py                 protocols A random, B load, C fault size  [done]
 │   └── run_experiments.py        6 feature sets x 3 protocols x 3 models
 │                                 x 5 seeds                                 [done]
-├── tests/                        one test file per src module              [done for 11 modules]
+├── tests/                        one test file per src module, plus
+│                                 test_readme.py (README numbers = results) [done]
 ├── results/                      generated tables and figures              [done]
 └── docs/
     ├── VALIDATION.md             evidence that each step is correct        [done, v4.1]

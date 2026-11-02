@@ -134,7 +134,7 @@ high as A (0.97).
 | `CHANGELOG.md` | A diary: what changed in each working session and what comes next. |
 | `requirements.txt` | The exact versions of the five libraries, so anyone can rebuild the same setup and get the same numbers. |
 | `.gitignore` | Tells git to ignore temporary files Python creates by itself. |
-| `README.md` | The front page on GitHub. Still a stub. |
+| `README.md` | The front page on GitHub: the question, the headline results, the data findings, and how to reproduce everything. A test (`tests/test_readme.py`) checks that its numbers match `results/results_all.csv`. |
 
 ### `data/raw/`: the recordings
 
