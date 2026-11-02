@@ -1,41 +1,41 @@
-file_number,fault_location,fault_size_in,load_hp,rpm,rpm_source,sampling_rate_hz,n_samples,duration_s,status,de_variable,notes
-97,normal,0.0,0,1796,stored,48000,243938,5.082,ok,X097_DE_time,
-98,normal,0.0,1,1772,nominal,48000,483903,10.081,ok,X098_DE_time,
-99,normal,0.0,2,1750,nominal,48000,485063,10.105,ok,X099_DE_time,file also contains X098_DE_time
-100,normal,0.0,3,1725,stored,48000,485643,10.118,ok,X100_DE_time,stored rpm 1725 differs from nominal 1730 by -5
-105,inner_race,0.007,0,1797,stored,12000,121265,10.105,ok,X105_DE_time,
-106,inner_race,0.007,1,1772,stored,12000,121991,10.166,ok,X106_DE_time,
-107,inner_race,0.007,2,1748,stored,12000,122136,10.178,ok,X107_DE_time,
-108,inner_race,0.007,3,1721,stored,12000,122917,10.243,ok,X108_DE_time,stored rpm 1721 differs from nominal 1730 by -9
-169,inner_race,0.014,0,1796,stored,12000,121846,10.154,ok,X169_DE_time,
-170,inner_race,0.014,1,1774,stored,12000,121846,10.154,ok,X170_DE_time,
-171,inner_race,0.014,2,1752,stored,12000,121846,10.154,ok,X171_DE_time,
-172,inner_race,0.014,3,1728,stored,12000,121701,10.142,ok,X172_DE_time,
-209,inner_race,0.021,0,1797,stored,12000,122136,10.178,ok,X209_DE_time,
-210,inner_race,0.021,1,1774,stored,12000,121556,10.13,ok,X210_DE_time,
-211,inner_race,0.021,2,1752,stored,12000,121846,10.154,ok,X211_DE_time,
-212,inner_race,0.021,3,1728,stored,12000,121991,10.166,ok,X212_DE_time,
-118,ball,0.007,0,1796,stored,12000,122571,10.214,ok,X118_DE_time,
-119,ball,0.007,1,1772,stored,12000,121410,10.117,ok,X119_DE_time,
-120,ball,0.007,2,1748,stored,12000,121556,10.13,ok,X120_DE_time,
-121,ball,0.007,3,1722,stored,12000,121556,10.13,ok,X121_DE_time,stored rpm 1722 differs from nominal 1730 by -8
-185,ball,0.014,0,1796,stored,12000,121846,10.154,ok,X185_DE_time,
-186,ball,0.014,1,1772,stored,12000,122136,10.178,ok,X186_DE_time,
-187,ball,0.014,2,1749,stored,12000,121991,10.166,ok,X187_DE_time,
-188,ball,0.014,3,1724,stored,12000,122136,10.178,ok,X188_DE_time,stored rpm 1724 differs from nominal 1730 by -6
-222,ball,0.021,0,1796,stored,12000,121991,10.166,ok,X222_DE_time,
-223,ball,0.021,1,1774,stored,12000,121701,10.142,ok,X223_DE_time,
-224,ball,0.021,2,1754,stored,12000,122136,10.178,ok,X224_DE_time,
-225,ball,0.021,3,1729,stored,12000,122136,10.178,ok,X225_DE_time,
-130,outer_race,0.007,0,1796,stored,12000,121991,10.166,ok,X130_DE_time,
-131,outer_race,0.007,1,1773,stored,12000,122426,10.202,ok,X131_DE_time,
-132,outer_race,0.007,2,1750,stored,12000,121410,10.117,ok,X132_DE_time,
-133,outer_race,0.007,3,1725,stored,12000,122571,10.214,ok,X133_DE_time,stored rpm 1725 differs from nominal 1730 by -5
-197,outer_race,0.014,0,1796,stored,12000,121846,10.154,ok,X197_DE_time,
-198,outer_race,0.014,1,1772,stored,12000,122136,10.178,ok,X198_DE_time,
-199,outer_race,0.014,2,1749,stored,12000,121846,10.154,ok,X199_DE_time,
-200,outer_race,0.014,3,1723,stored,12000,121991,10.166,ok,X200_DE_time,stored rpm 1723 differs from nominal 1730 by -7
-234,outer_race,0.021,0,1796,stored,12000,122426,10.202,ok,X234_DE_time,
-235,outer_race,0.021,1,1771,stored,12000,121991,10.166,ok,X235_DE_time,
-236,outer_race,0.021,2,1748,stored,12000,122281,10.19,ok,X236_DE_time,
-237,outer_race,0.021,3,1721,stored,12000,121991,10.166,ok,X237_DE_time,stored rpm 1721 differs from nominal 1730 by -9
+file_number,cwru_name,fault_location,fault_size_in,load_hp,rpm,rpm_source,sampling_rate_hz,n_samples,duration_s,status,de_variable,notes
+97,Normal_0,normal,0.0,0,1796,stored,48000,243938,5.082,ok,X097_DE_time,
+98,Normal_1,normal,0.0,1,1772,nominal,48000,483903,10.081,ok,X098_DE_time,
+99,Normal_2,normal,0.0,2,1750,nominal,48000,485063,10.105,ok,X099_DE_time,file also contains X098_DE_time
+100,Normal_3,normal,0.0,3,1725,stored,48000,485643,10.118,ok,X100_DE_time,stored rpm 1725 differs from nominal 1730 by -5
+105,IR007_0,inner_race,0.007,0,1797,stored,12000,121265,10.105,ok,X105_DE_time,
+106,IR007_1,inner_race,0.007,1,1772,stored,12000,121991,10.166,ok,X106_DE_time,
+107,IR007_2,inner_race,0.007,2,1748,stored,12000,122136,10.178,ok,X107_DE_time,
+108,IR007_3,inner_race,0.007,3,1721,stored,12000,122917,10.243,ok,X108_DE_time,stored rpm 1721 differs from nominal 1730 by -9
+169,IR014_0,inner_race,0.014,0,1796,stored,12000,121846,10.154,ok,X169_DE_time,
+170,IR014_1,inner_race,0.014,1,1774,stored,12000,121846,10.154,ok,X170_DE_time,
+171,IR014_2,inner_race,0.014,2,1752,stored,12000,121846,10.154,ok,X171_DE_time,
+172,IR014_3,inner_race,0.014,3,1728,stored,12000,121701,10.142,ok,X172_DE_time,
+209,IR021_0,inner_race,0.021,0,1797,stored,12000,122136,10.178,ok,X209_DE_time,
+210,IR021_1,inner_race,0.021,1,1774,stored,12000,121556,10.13,ok,X210_DE_time,
+211,IR021_2,inner_race,0.021,2,1752,stored,12000,121846,10.154,ok,X211_DE_time,
+212,IR021_3,inner_race,0.021,3,1728,stored,12000,121991,10.166,ok,X212_DE_time,
+118,B007_0,ball,0.007,0,1796,stored,12000,122571,10.214,ok,X118_DE_time,
+119,B007_1,ball,0.007,1,1772,stored,12000,121410,10.117,ok,X119_DE_time,
+120,B007_2,ball,0.007,2,1748,stored,12000,121556,10.13,ok,X120_DE_time,
+121,B007_3,ball,0.007,3,1722,stored,12000,121556,10.13,ok,X121_DE_time,stored rpm 1722 differs from nominal 1730 by -8
+185,B014_0,ball,0.014,0,1796,stored,12000,121846,10.154,ok,X185_DE_time,
+186,B014_1,ball,0.014,1,1772,stored,12000,122136,10.178,ok,X186_DE_time,
+187,B014_2,ball,0.014,2,1749,stored,12000,121991,10.166,ok,X187_DE_time,
+188,B014_3,ball,0.014,3,1724,stored,12000,122136,10.178,ok,X188_DE_time,stored rpm 1724 differs from nominal 1730 by -6
+222,B021_0,ball,0.021,0,1796,stored,12000,121991,10.166,ok,X222_DE_time,
+223,B021_1,ball,0.021,1,1774,stored,12000,121701,10.142,ok,X223_DE_time,
+224,B021_2,ball,0.021,2,1754,stored,12000,122136,10.178,ok,X224_DE_time,
+225,B021_3,ball,0.021,3,1729,stored,12000,122136,10.178,ok,X225_DE_time,
+130,OR007@6_0,outer_race,0.007,0,1796,stored,12000,121991,10.166,ok,X130_DE_time,
+131,OR007@6_1,outer_race,0.007,1,1773,stored,12000,122426,10.202,ok,X131_DE_time,
+132,OR007@6_2,outer_race,0.007,2,1750,stored,12000,121410,10.117,ok,X132_DE_time,
+133,OR007@6_3,outer_race,0.007,3,1725,stored,12000,122571,10.214,ok,X133_DE_time,stored rpm 1725 differs from nominal 1730 by -5
+197,OR014@6_0,outer_race,0.014,0,1796,stored,12000,121846,10.154,ok,X197_DE_time,
+198,OR014@6_1,outer_race,0.014,1,1772,stored,12000,122136,10.178,ok,X198_DE_time,
+199,OR014@6_2,outer_race,0.014,2,1749,stored,12000,121846,10.154,ok,X199_DE_time,
+200,OR014@6_3,outer_race,0.014,3,1723,stored,12000,121991,10.166,ok,X200_DE_time,stored rpm 1723 differs from nominal 1730 by -7
+234,OR021@6_0,outer_race,0.021,0,1796,stored,12000,122426,10.202,ok,X234_DE_time,
+235,OR021@6_1,outer_race,0.021,1,1771,stored,12000,121991,10.166,ok,X235_DE_time,
+236,OR021@6_2,outer_race,0.021,2,1748,stored,12000,122281,10.19,ok,X236_DE_time,
+237,OR021@6_3,outer_race,0.021,3,1721,stored,12000,121991,10.166,ok,X237_DE_time,stored rpm 1721 differs from nominal 1730 by -9

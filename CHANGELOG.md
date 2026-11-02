@@ -3,6 +3,51 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 3b (2026-11-02): checked against CWRU's official website
+
+Owner request: check the files against the official website. The owner
+allowed `engineering.case.edu` in the session's network settings. No data
+file was downloaded; file sizes came from header-only requests.
+
+### Added / changed
+- `data/cwru_official_reference.csv` (new): the official name, size in
+  bytes, date and address of each of our 40 files, as listed on 2026-11-02.
+- `src/config.py`:
+  - `cwru_name()` gives each file's official name, which now also appears
+    in the manifest;
+  - `OFFICIAL_REFERENCE_CSV` points to the reference file;
+  - FTF updated to CWRU's 5-decimal figure, 0.39828;
+  - `FAN_END_CWRU_MULTIPLIERS` added;
+  - the load-zone wording is corrected.
+- `src/check_fault_signatures.py`: also records two raw-spectrum peaks per
+  file, at the drive-end and fan-end BPFI. They are not used in verdicts.
+- Tests: 73 (5 new), all passing. They check offline that all 40 labels
+  match the official names and all 40 file sizes match.
+  - Swapping two condition groups in the config makes 8 subtests fail.
+- `docs/VALIDATION.md` v3.1:
+  - new section 1.3 (website check);
+  - section 2.3 adds the FTF note;
+  - section 4.1 is rewritten with the explanation of the rig-wide peaks.
+  - `CLAUDE.md` and `docs/HOW_IT_WORKS.md` updated.
+
+### Found
+- **All 40 files match the official site:** same file number → condition,
+  fault size and load (40/40), and the same size to the byte (40/40).
+- Nominal speeds, bearing geometry, and BPFI, BPFO and rolling-element
+  multipliers all match.
+- CWRU's FTF (0.39828) is 0.008% off their own BPFO ÷ 9 (0.39831), which is
+  negligible.
+- **The site gives no sampling rate for the normal files**, so it does not
+  contradict our 48 kHz finding. RPM was "recorded by hand", and the site
+  says every file has RPM, but 98 and 99 do not.
+- **The site contradicts itself on the outer-race position.** Its table
+  says the load zone is centred at 6:00; its procedures page calls 6:00
+  "orthogonal to the load zone". Our "@6" labels are unaffected.
+- **The rig-wide raw peaks are explained.** At 5.40× and 4.93× shaft speed
+  they are the inner-race frequencies of the drive-end and fan-end bearings
+  (fan-end value from the official site). They are in all 40 files, both
+  about 0.27% below theory.
+
 ## Session 3 (2026-11-02): envelope label check; CWRU labels kept
 
 Owner decisions:

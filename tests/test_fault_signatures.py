@@ -140,6 +140,20 @@ class TestWindows(unittest.TestCase):
         self.assertLess(bp.bpfi_multiplier() * (1 - sig.NARROW_TOLERANCE), 5.40)
 
 
+class TestRigWideRawPeaks(unittest.TestCase):
+
+    def test_finds_a_tone_at_the_fan_end_inner_race_frequency(self):
+        t = np.arange(FS * 10) / FS
+        fe_hz = config.FAN_END_CWRU_MULTIPLIERS["BPFI"] * SHAFT_HZ
+        rng = np.random.default_rng(5)
+        x = 0.2 * np.sin(2 * np.pi * fe_hz * t) + rng.normal(0, 0.3, t.size)
+        found = sig.rig_wide_raw_peaks(x, RPM)
+        ratio, position = found["raw_fan_end_BPFI"]
+        self.assertGreater(ratio, 10)
+        self.assertAlmostEqual(position, config.FAN_END_CWRU_MULTIPLIERS["BPFI"], delta=0.01)
+        self.assertLess(found["raw_drive_end_BPFI"][0], 10)
+
+
 class TestVerdictRules(unittest.TestCase):
 
     def test_rules(self):

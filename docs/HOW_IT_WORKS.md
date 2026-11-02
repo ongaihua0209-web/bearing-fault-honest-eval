@@ -60,6 +60,14 @@ So far only the first two stages exist. Nothing is trained yet.
 The CWRU `.mat` files, named by CWRU file number (e.g. `234.mat`). Scripts
 only ever *read* these. Nothing changes them.
 
+### `data/cwru_official_reference.csv`: the official check
+
+What CWRU's official website listed on 2026-11-02 for each of our 40
+files: its official name (e.g. `IR007_0`), its size in bytes, and its
+download address. Think of it as the supplier's delivery note. The tests
+compare our labels and our files against it every time they run, without
+going online. All 40 names and all 40 sizes match.
+
 ### `src/`: the working code
 
 **`src/config.py`: the data sheet.**

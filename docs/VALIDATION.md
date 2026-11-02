@@ -1,4 +1,4 @@
-# Validation: version 3 (2026-11-02, all 40 files)
+# Validation: version 3.1 (2026-11-02, all 40 files)
 
 This document holds the evidence that each step of the project does what it
 claims. Every number here comes from a script in `src/` and is checked by a
@@ -8,7 +8,9 @@ test in `tests/`.
 - the label check is now a tested script, `src/check_fault_signatures.py`,
   with a data-driven band choice. It replaces the exploratory one-off
   calculation, and section 4.2 is rewritten from its results;
-- the decision to keep CWRU's labels is recorded (section 4.3).
+- the decision to keep CWRU's labels is recorded (section 4.3);
+- v3.1: everything is checked against CWRU's official website (section
+  1.3). The rig-wide peaks in section 4.1 are now explained.
 
 Version 2 covered all 40 files, settled the two normal-file questions and
 added the quarter-order sampling-rate test. Version 2.1 added the 5 kHz
@@ -71,6 +73,54 @@ All 40 files are present and readable.
    DE, FE and BA. We use only DE, but any model given BA could spot
    "normal" from the missing channel alone.
 
+### 1.3 Checked against CWRU's official website (2026-11-02)
+
+Source: the [Bearing Data Center](https://engineering.case.edu/bearingdatacenter)
+pages, read on 2026-11-02:
+- [Normal Baseline Data](https://engineering.case.edu/bearingdatacenter/normal-baseline-data)
+- [12k Drive End Bearing Fault Data](https://engineering.case.edu/bearingdatacenter/12k-drive-end-bearing-fault-data)
+- [Download a Data File](https://engineering.case.edu/bearingdatacenter/download-data-file)
+- [Apparatus & Procedures](https://engineering.case.edu/bearingdatacenter/apparatus-and-procedures)
+- [Bearing Information](https://engineering.case.edu/bearingdatacenter/bearing-information)
+- [Fault Specifications](https://engineering.case.edu/bearingdatacenter/fault-specifications)
+
+What we read is saved in `data/cwru_official_reference.csv`: every file's
+official name, size, date and address. Tests compare against it offline, so
+the project itself never goes online. No data file was downloaded. File
+sizes came from header-only requests, which return the size without the
+file.
+
+| Check | Result |
+|---|---|
+| File number → condition, fault size, load (all 40) | **40/40 match** the official tables. 105 is `IR007_0`, 130 is `OR007@6_0`, 97 is `Normal_0`, and so on. A test re-checks this. |
+| File size in bytes (all 40) | **40/40 identical** to the official files. A test re-checks this. This is strong evidence the files are the originals, but not proof; a full checksum would need downloading them. |
+| Nominal speeds per load | 1797 / 1772 / 1750 / 1730 rpm: **match** |
+| Bearing geometry (6205-2RS JEM) | ball diameter 0.3126 in (7.940 mm) and pitch diameter 1.537 in (39.040 mm): **match** |
+| Fault-frequency multipliers | BPFI 5.4152, BPFO 3.5848, rolling element 4.7135: **match**. FTF is published as 0.39828; see section 2.3. |
+| Fault depth (all our faults) | 0.011 in, SKF bearings (not used in calculations) |
+
+What the site says that matters to us:
+- **Sampling rate:**
+  - The site says: "Data was collected at 12,000 samples/second and at
+    48,000 samples/second for drive end bearing experiments."
+  - The Normal Baseline page **gives no rate at all**. The site never says
+    the normal files are 12 kHz, so it does not contradict our finding that
+    they are 48 kHz (section 3).
+- **Speed:** "Speed and horsepower data were collected using the torque
+  transducer/encoder and were **recorded by hand**." So the stored RPM is
+  a hand-written reading, which explains why it is always a whole number.
+  - The site also says every file contains the motor speed. Files 98 and
+    99 do not (section 1.2).
+- **Outer-race position: the site contradicts itself.**
+  - The 12k data table says "Load Zone Centered at 6:00", with 3:00
+    "Orthogonal".
+  - The Apparatus & Procedures page says 3 o'clock is "directly in the load
+    zone" and 6 o'clock is "orthogonal to the load zone".
+  - Our files are the "@6" files either way, so the labels are unaffected.
+    But whether these outer-race faults sat in the centre of the load zone
+    is uncertain. Earlier versions of this project stated it as fact; they
+    no longer do.
+
 ---
 
 ## 2. Bearing fault frequencies
@@ -122,11 +172,14 @@ Values at all four nominal speeds are in `results/fault_frequencies.csv`.
 |---|---|---|---|
 | BPFI | 5.41522 | 5.4152 | +0.00002 |
 | BPFO | 3.58478 | 3.5848 | −0.00002 |
-| FTF | 0.39831 | 0.3983 | +0.00001 |
+| FTF | 0.39831 | 0.39828 | +0.00003 |
 | BSF (standard) | 2.35675 | none | none |
 | 2 × BSF | 4.71350 | 4.7135 ("rolling element") | −0.000005 |
 
-Every difference is smaller than CWRU's rounding to 4 decimals.
+Every difference is within CWRU's rounding, except a tiny FTF quirk.
+CWRU publishes FTF to 5 decimals as 0.39828, but FTF must equal BPFO ÷ 9,
+and their own BPFO gives 3.5848 ÷ 9 = **0.39831**, matching ours. Their
+published figures are therefore inconsistent by 0.008%, which is negligible.
 
 ### 2.4 Finding: CWRU's "rolling element" frequency is 2 × BSF
 
@@ -311,17 +364,31 @@ files. After it, **every one of the 40 files is below −130 dB**, less than
 
 ## 4. Observations from looking at the spectra
 
-### 4.1 A peak at 5.40× shaft speed is in every file, including the healthy ones
+### 4.1 Both bearings' inner-race frequencies appear in every file, healthy ones included
 
-In **all 40 files** (healthy normal files included, after resampling), the
-tallest raw-spectrum peak below 200 Hz is at **5.40 × shaft speed**, with
-smaller neighbours at about 4.93× and 6.40×.
-- 5.40× is where the inner-race fault frequency (BPFI) shows up in the
-  inner-race files' envelope spectra (section 4.2, measured at
-  5.40-5.41×): 0.1-0.3% below the theoretical 5.415×, which is typical
-  slip.
-- Because the peak is also present in healthy bearings, it is a property
-  of the test rig, not a sign of a fault. Its cause is unknown.
+Source: `python -m src.check_fault_signatures`, columns `raw_*` in
+`results/fault_signatures.csv`.
+
+In **all 40 files**, healthy normal files included, the raw spectrum has
+clear peaks at:
+
+| Peak | Theory | Found (all 40 files) | Peak / background |
+|---|---|---|---|
+| Drive-end bearing BPFI | 5.415× | **5.394-5.403×** (median 0.28% below) | 146-1044 |
+| Fan-end bearing BPFI (6203, CWRU's figure) | 4.947× | **4.930-4.937×** (median 0.26% below) | 62-433 |
+
+The 5.40× peak is usually the tallest below 200 Hz. A further peak at
+6.40× is 5.40× plus one shaft turn.
+
+- **Both peaks sit about 0.27% below theory, the same small slip.** So the
+  unexplained rig-wide peaks from version 2 are the **inner-race
+  ball-pass frequencies of the two bearings**. That is the fan-end
+  bearing's value that the official site lists (section 1.3), and it
+  matches.
+- They are present in healthy bearings too, so in this data they are part
+  of the normal vibration of the rig, not a seeded fault. Small imperfections
+  in the races or balls can produce such components; which one does here is
+  not established.
 
 **Consequence:** a "raw spectrum amplitude at BPFI" feature cannot tell
 anything apart in this data. Physics-informed features must use the
@@ -466,6 +533,8 @@ Consequences for reporting:
 
 ## 5. Related sources
 
+- CWRU Bearing Data Center, the official data source (pages listed in
+  section 1.3, read 2026-11-02).
 - Smith, W.A. and Randall, R.B. (2015), *Rolling element bearing diagnostics
   using the Case Western Reserve University data: a benchmark study*,
   Mechanical Systems and Signal Processing 64-65, 100-131,
@@ -501,5 +570,7 @@ Consequences for reporting:
 | Peaks at 2.40× and 4.79-4.80× in non-ball files | explained for 2.40× (BPFI − 3×); 4.79-4.80× origin not established |
 | Low-pass all signals at about 5 kHz to remove the 48 kHz band-edge difference | **done**: 4.8/5.2 kHz FIR in `load_signal()`, verified on all 40 files |
 | Normal-only tones at 4.1-4.3 kHz (possible shortcut inside the kept band) | unexplained; watch for it in feature importance |
-| Cause of the rig-wide 5.40× raw-spectrum peak | unexplained |
+| Rig-wide raw peaks at 5.40× and 4.93× | **explained**: inner-race frequencies of the drive-end and fan-end bearings (section 4.1). Physical source not established. |
+| Files match the official website | **checked**: 40/40 names and 40/40 sizes (section 1.3) |
+| Is the 6:00 outer-race position in the load zone? | official site contradicts itself (section 1.3) |
 | Read Smith & Randall (2015) in full | to do |

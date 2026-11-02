@@ -192,6 +192,27 @@ def verdict(label, clear_types):
     return "no signature"
 
 
+def rig_wide_raw_peaks(signal, rpm, fs=config.TARGET_SAMPLING_RATE_HZ):
+    """
+    Not part of the verdict. Measures two peaks in the RAW spectrum (no
+    envelope) that appear in every file, healthy ones included: the
+    inner-race frequencies of the drive-end bearing (BPFI, 5.415x) and of the
+    fan-end bearing (4.947x, CWRU's figure). Recording them shows why a raw
+    spectrum peak at BPFI is NOT evidence of an inner-race fault in this data.
+    Returns {name: (ratio, peak_position_in_shaft_orders)}.
+    """
+    frequencies, amplitudes = amplitude_spectrum(signal, fs)
+    shaft_hz = rpm / 60.0
+    targets = {"raw_drive_end_BPFI": bearing_physics.bpfi_multiplier(),
+               "raw_fan_end_BPFI": config.FAN_END_CWRU_MULTIPLIERS["BPFI"]}
+    found = {}
+    for name, multiplier in targets.items():
+        peak_hz, ratio = peak_strength(frequencies, amplitudes, multiplier * shaft_hz,
+                                       SEARCH_TOLERANCE, BACKGROUND_SPAN)
+        found[name] = (ratio, peak_hz / shaft_hz)
+    return found
+
+
 def check_signal(signal, rpm, label, fs=config.TARGET_SAMPLING_RATE_HZ):
     """
     The whole check for one signal: pick the band, compute both envelope
@@ -278,6 +299,9 @@ def main():
         signal, rpm, fs = load_data.load_signal(number)
         label = info["fault_location"]
         result, (freqs, amps) = check_signal(signal, rpm, label, fs)
+        for name, (ratio, position) in rig_wide_raw_peaks(signal, rpm, fs).items():
+            result[name] = round(ratio, 1)
+            result[name + "_at_order"] = round(position, 3)
         short = f"{label} {info['fault_size_in']:.3f} {info['load_hp']}HP"
         rows.append({"file_number": number, "label": label,
                      "fault_size_in": info["fault_size_in"], "load_hp": info["load_hp"],
@@ -301,6 +325,11 @@ def main():
             lambda v: ", ".join(f"{k} x{c}" for k, c in v.value_counts().items()))
         for (label, size), text in summary.items():
             print(f"  {label:10s} {size:.3f}  {text}")
+    print("\nRaw-spectrum peaks present in every file (not used in verdicts):")
+    for name in ("raw_drive_end_BPFI", "raw_fan_end_BPFI"):
+        print(f"  {name}: found at {table[name + '_at_order'].min():.3f}-"
+              f"{table[name + '_at_order'].max():.3f} x shaft speed, "
+              f"peak/background {table[name].min():.0f}-{table[name].max():.0f}")
     print(f"\nSaved {out_csv.relative_to(config.REPO_ROOT)} and "
           f"results/figures/fault_signatures_overview.png")
 

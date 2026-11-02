@@ -105,8 +105,18 @@ Drive-end bearing: SKF 6205-2RS JEM. 9 balls, ball diameter 7.94 mm, pitch
 diameter 39.04 mm, contact angle 0 degrees.
 
 CWRU's published multipliers (× shaft speed): BPFI 5.4152, BPFO 3.5848,
-FTF 0.3983, rolling element 4.7135. The last one is **2 × BSF**. The
+FTF 0.39828, rolling element 4.7135. The last one is **2 × BSF**. The
 standard BSF is 2.3567. See `docs/VALIDATION.md`.
+
+### Checked against the official website (2026-11-02)
+
+- All 40 file numbers, labels and file sizes match CWRU's Bearing Data
+  Center. The record is `data/cwru_official_reference.csv`, and tests
+  re-check it offline. No data was downloaded.
+- The official site contradicts itself on whether 6:00 is the centre of
+  the load zone or orthogonal to it. Do not state either as fact.
+- The site gives no sampling rate for the normal files. Our data shows
+  48 kHz (docs/VALIDATION.md 1.3 and 3).
 
 ## Repository structure
 
@@ -119,6 +129,7 @@ bearing-fault-honest-eval/
 ├── README.md                     portfolio-facing summary                  [planned]
 ├── requirements.txt              pinned library versions                   [done]
 ├── data/raw/                     CWRU .mat files, e.g. 105.mat             [40 of 40]
+├── data/cwru_official_reference.csv  official names + sizes (read 2026-11-02) [done]
 ├── src/
 │   ├── config.py                 all fixed facts: files, labels, geometry  [done]
 │   ├── load_data.py              load files, manifest, duplicate check     [done]
@@ -136,7 +147,7 @@ bearing-fault-honest-eval/
 ├── tests/                        one test file per src module              [done for 6 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v3]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v3.1]
     └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v2]
 ```
 
