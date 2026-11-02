@@ -1,0 +1,9 @@
+fault_location,fault_size_in,test,n_windows,share_true
+inner_race,all,bpfi_1x > bpfo_1x,169,1.0
+inner_race,0.007,bpfi_1x > bpfo_1x,57,1.0
+inner_race,0.014,bpfi_1x > bpfo_1x,56,1.0
+inner_race,0.021,bpfi_1x > bpfo_1x,56,1.0
+outer_race,all,bpfo_1x > bpfi_1x,168,0.839
+outer_race,0.007,bpfo_1x > bpfi_1x,56,1.0
+outer_race,0.014,bpfo_1x > bpfi_1x,56,0.518
+outer_race,0.021,bpfo_1x > bpfi_1x,56,1.0

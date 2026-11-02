@@ -1,4 +1,4 @@
-# How it works: version 3 (2026-11-02)
+# How it works: version 5 (2026-11-02)
 
 A plain-English guide to every file in this project, written for someone
 who has never programmed.
@@ -9,13 +9,94 @@ The project is a measurement chain, like an instrumented test rig. Each
 step checks the one before it before anything gets built on top:
 
 ```
- raw recordings     check & list them      check the physics       (later)
- data/raw/*.mat --> load_data.py      --> bearing_physics.py  --> features
-                    check_sampling_rate.py                     --> models
-                                                              --> honest scores
+ raw recordings     check & list them      cut into windows    describe each     train & test
+ data/raw/*.mat --> load_data.py      --> segment.py      --> window         --> run_experiments.py
+                    check_*.py                                features.py        (3 ways of testing:
+                    bearing_physics.py                                            splits.py)
 ```
 
-So far only the first two stages exist. Nothing is trained yet.
+The checking stages are complete. The full experiment is in place: three
+ways of testing, four feature sets (generic, spectral, physics-based, and
+generic plus physics), three models. The answers are in `docs/RESULTS.md`.
+
+## Envelope analysis, explained like a mechanic listening to a bearing
+
+A mechanic presses a screwdriver against a bearing housing and puts an ear
+to the handle. A healthy bearing gives a smooth hiss. A damaged one gives a
+faint, regular **tick ... tick ... tick** under the hiss: a ball hitting
+the damaged spot. What gives the fault away is not how *loud* the bearing
+is but the **rhythm** of the ticks.
+
+- **The rhythm tells you where the damage is.** A spot on the outer race
+  is hit by every passing ball, about 107 times a second at 1797 rpm
+  (BPFO). A spot on the inner race is hit more often, about 162 times a
+  second (BPFI), because the inner race turns towards the balls. A spot on
+  a ball hits the races about 141 times a second (2×BSF). A trained ear
+  hears the difference.
+- **Each tick is a tiny hammer blow.** It makes the housing ring briefly
+  at its own high pitch (thousands of Hz), like a struck bell. So the
+  ticks live high up, in the frequency band where the housing rings.
+
+Envelope analysis does what the mechanic's ear does, in three steps:
+1. **Listen only where the ringing is.** Band-pass filter the signal, the
+   way you'd cup a hand to pick out a high pitch. We pick the band where
+   the signal is "spikiest", learned from the training recordings only.
+2. **Follow the loudness, not the pitch.** The envelope traces how the
+   ringing swells and fades: the outline of the ticks.
+3. **Count the beat.** The spectrum of that outline shows peaks at the
+   tick rate: at BPFO for an outer-race fault, at BPFI for an inner-race
+   fault.
+
+Feature set F3 measures how tall the peaks are at the outer-race, inner-race
+and ball tick rates (and at twice and three times those rates), compared
+with the background hiss. Generic features (F1) only measure how loud and
+how spiky the signal is. Loudness changes with fault size; the rhythm
+does not. That is why F3 should cope better with fault sizes the model has
+never heard.
+
+In this data it did, but only for the faults that really tick at the right
+rhythm (`docs/RESULTS.md`, RQ2).
+
+## Data leakage, explained with an exam
+
+Imagine a teacher who wants to know whether students understand
+mechanics. She writes 100 questions, gives the students 80 to study, and
+sets the exam from the other 20.
+
+Now imagine the 100 questions were made by taking 10 long problems and
+cutting each into 10 small steps. Steps from the same problem look alike:
+same numbers, same diagram. If the 80 study questions and the 20 exam
+questions are picked at random, almost every exam question has a sibling
+in the study pile. A student who memorised the study pile scores 98% on
+the exam without understanding any mechanics. They recognise the problem;
+they do not solve it.
+
+That is **data leakage**, and it is exactly what happens with CWRU:
+
+| Exam | This project |
+|---|---|
+| a long problem | one 10-second recording |
+| its small steps | the 0.17-second windows cut from it |
+| study pile / exam | training set / test set |
+| memorising the problem | recognising the recording: its loudness, noise and quirks |
+| understanding mechanics | recognising the *fault*, on a machine never seen before |
+
+**Why protocol A (random windows) is misleading.** It is the random
+pick in the story. Every recording ends up in both the training and the
+test set, so the model can score highly just by recognising recordings.
+In our run it scores 0.99, which looks like a solved problem. When the
+same models are tested on fault sizes they have never seen (protocol C),
+they score about 0.46-0.50, where 0.25 is pure guessing.
+
+The 0.99 was not wrong arithmetic. It answered a different, much easier
+question ("have I seen this recording before?") than the one that matters
+("can I recognise this fault on a new bearing?").
+
+**Protocol B (new load) leaks too, in a quieter way.** Each CWRU fault is
+one physical bearing, recorded at four loads. Testing at a new load still
+tests the *same bearing* the model studied, like an exam with the same
+problems and slightly different numbers. That is why B scores almost as
+high as A (0.97).
 
 ## Words you will meet
 
@@ -152,6 +233,84 @@ It never changes a label; it only reports. It writes
 `results/fault_signatures.csv` and
 `results/figures/fault_signatures_overview.png`.
 
+**`src/segment.py`: cutting recordings into windows.**
+Run with `python -m src.segment`. It cuts every recording into
+back-to-back windows of 2048 samples (0.17 s), with no overlap. That gives
+2331 windows from the 40 recordings. Every window remembers which
+recording, fault type, fault size and load it came from.
+
+**`src/features.py`: describing each window with a few numbers.**
+(Careful: "F1" is the name of a feature set; "macro-F1" is a score,
+explained below.)
+- **F1, generic (7 numbers):** RMS, peak, peak-to-peak, crest factor,
+  kurtosis, skewness and standard deviation. Nothing about bearings.
+- **F2, spectral (16 numbers):** how much vibration energy sits in each of
+  16 slices of 300 Hz between 0 and 4.8 kHz. Still nothing about bearings.
+  (The project rule stops at 4.8 kHz, where the healthy and faulty
+  recordings stop being recorded alike.)
+- **F3, physics-informed (9 numbers):** envelope analysis (see "Envelope
+  analysis, explained like a mechanic"). It gives the peak height at 1×,
+  2× and 3× of BPFO, BPFI and 2×BSF, worked out from each recording's own
+  speed and compared with the background.
+- **F1+F3:** both side by side.
+
+F3 needs longer windows: 8192 samples (0.68 s) instead of 2048. A short
+window blurs the spectrum into 5.9 Hz steps, too coarse to tell 2×BSF from
+a sideband of the outer-race line only 3.7 Hz away. Longer windows give
+1.46 Hz steps, but 4 times fewer examples to learn from.
+
+**`src/check_physics_features.py`: checking F3 before trusting it.**
+Run with `python -m src.check_physics_features`. It:
+- proves the window-length argument above with a table of how close each
+  fault line is to its neighbours;
+- checks that inner-race recordings show more at BPFI than at BPFO, and
+  outer-race recordings the reverse (100% and 84% of windows);
+- draws an envelope spectrum for one window of each class.
+
+It writes `results/f3_resolution_check.csv`, `results/f3_sanity.csv` and
+`results/figures/f3_envelope_spectra.png`.
+
+**`src/splits.py`: three ways of choosing the exam.**
+- **A, random:** shuffle all windows and keep 20% for testing. Leaky on
+  purpose (see "Data leakage, explained with an exam").
+- **B, unseen load:** train on 0-2 HP, test on 3 HP. No recording is on
+  both sides, but every bearing is.
+- **C, unseen fault size:** three rounds. Each round tests on one fault
+  size (0.007, 0.014 or 0.021 in) of every fault type, and trains on the
+  other two. The faulty test bearings are truly new. The healthy class has
+  only one bearing, so the healthy test windows come from that same
+  bearing at a different load.
+
+**`src/run_experiments.py`: the experiment.**
+Run with `python -m src.run_experiments`. It takes about 9 minutes. For
+every protocol and every feature set it trains three kinds of model:
+- logistic regression, which draws straight dividing lines;
+- random forest, a vote among hundreds of decision trees;
+- gradient boosting, which builds trees one after another, each fixing
+  the last one's mistakes.
+
+Each is trained with 5 different random seeds, to show how much the
+results wobble.
+
+Two extra "control" runs use F1 and F2 on the long 8192-sample windows.
+Without them, we could not tell whether F3 did better because of the
+physics or just because its windows are longer.
+
+The scaler that puts all features on the same scale learns only from the
+training windows. So does F3's choice of frequency band. That is rule 1 of
+the project: never let the test set leak into training in any form.
+
+Scores:
+- **Macro-F1:** how well each class is caught, without false alarms,
+  averaged so that all four classes count equally. 1.0 is perfect; about
+  0.25 is guessing.
+- **Balanced accuracy:** the share of each class recognised, averaged
+  equally over the classes.
+
+The results go into `results/` (see the table below), including a chart
+and confusion matrices. A confusion matrix shows, for each true class, what
+the model said it was.
+
 **`src/bearing_physics.py`: the pencil-and-paper part.**
 Run with `python -m src.bearing_physics`. It calculates the bearing fault
 frequencies (FTF, BPFO, BPFI, BSF) from the ball count and dimensions,
@@ -185,6 +344,31 @@ Each line of output is one check, ending in `ok` or `FAIL`. Examples:
   files have practically nothing left above 5.2 kHz? (`test_load_data.py`
   also checks the filter itself: unchanged below 4.8 kHz, at least 120 dB
   down above 5.2 kHz, and no time shift.)
+- `test_splits.py`: the proof that the exams are set fairly.
+  - No window is ever in both the training and the test set.
+  - In protocols B and C no faulty recording is either.
+  - In C the held-out fault size never appears in training.
+  - It also proves the leak in protocol A really exists: every recording
+    is on both sides.
+- `test_run_experiments.py`:
+  - The scaler learns only from training data.
+  - Scrambling the test answers does not change a single prediction, which
+    shows the models never see them.
+- `test_features.py`:
+  - Does a sine wave of amplitude 2 give RMS 1.414, crest factor 1.414 and
+    kurtosis 1.5, as the textbook says?
+  - Does a 1 kHz tone land in the 900-1200 Hz band of F2?
+  - Do fake impacts at exactly BPFO, BPFI or 2×BSF light up the matching F3
+    feature?
+  - Is F3's band chosen from the training windows even when the test
+    windows would prefer another?
+- `test_check_physics_features.py`:
+  - Is it true that 2048 samples separate only 3 of the 9 fault lines and
+    8192 samples separate 7?
+  - On the real data, do inner-race windows show more at BPFI than BPFO,
+    and outer-race windows the reverse?
+- `test_segment.py`: are windows cut back to back, with no sample used
+  twice?
 
 Most tests use small made-up signals where the right answer is known in
 advance. That is the same idea as checking a gauge against a reference
@@ -204,11 +388,18 @@ the code or `config.py` and re-run instead.
 | `band_edge_by_file.csv`, `band_edge_filters.csv`, `figures/band_edge.png` | `check_band_edge.py` |
 | `fault_signatures.csv`, `figures/fault_signatures_overview.png` | `check_fault_signatures.py` |
 | `fault_frequencies.csv` | `bearing_physics.py` |
+| `results_all.csv`: headline scores, feature set × protocol × model | `run_experiments.py` |
+| `results_all_runs.csv`, `results_all_by_group.csv`, `results_all_by_fold.csv`, `confusion_matrices_all.csv`, `feature_importance_C.csv`, `f3_bands_chosen.csv` | `run_experiments.py` |
+| `results_f1.csv`: the generic-feature subset (same as session 4) | `run_experiments.py` |
+| `figures/leakage_gap_by_feature_set.png`, `figures/feature_importance_best_C.png` | `run_experiments.py` |
+| `figures/f1_macro_f1_by_protocol.png`, `figures/f1_confusion_*.png` | `run_experiments.py` |
+| `f3_resolution_check.csv`, `f3_sanity.csv`, `figures/f3_envelope_spectra.png` | `check_physics_features.py` |
 
 ### `docs/`: the write-ups
 
 - `VALIDATION.md`: the evidence that each step is right, including hand
   calculations, plots and every data-quality finding.
+- `RESULTS.md`: the answers to the three research questions, with numbers.
 - `HOW_IT_WORKS.md`: this file.
 
 ## How to run everything
@@ -251,7 +442,19 @@ Open a terminal in the project folder and run these one at a time.
    python -m src.check_fault_signatures
    ```
 
-7. Run all the tests:
+7. Check the physics features:
+
+   ```bash
+   python -m src.check_physics_features
+   ```
+
+8. Run the full experiment (about 9 minutes):
+
+   ```bash
+   python -m src.run_experiments
+   ```
+
+9. Run all the tests:
 
    ```bash
    python -m unittest discover -s tests -v
@@ -264,6 +467,6 @@ Python can find `src`.
 ## Adding or replacing data files
 
 All 40 files are in `data/raw/`. If a file is ever added or replaced, name
-it by file number (e.g. `105.mat`) and re-run steps 3-7. The manifest, the
+it by file number (e.g. `105.mat`) and re-run steps 3-8. The manifest, the
 duplicate check and the sampling-rate check cover it automatically, and the
 tests fail if anything about it does not add up.

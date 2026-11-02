@@ -58,6 +58,23 @@ LOWPASS_STOPBAND_EDGE_HZ = 5_200
 LOWPASS_STOPBAND_ATTENUATION_DB = 60
 
 # ---------------------------------------------------------------------------
+# Windows for machine learning (owner decision, 2026-11-02).
+# Each recording is cut into non-overlapping windows of 2048 samples:
+# 2048 / 12000 Hz = 0.17 s, about 5 shaft turns at 1797 rpm, and about 18
+# outer-race / 28 inner-race impacts - enough to capture the fault rhythm.
+# ---------------------------------------------------------------------------
+WINDOW_LENGTH_SAMPLES = 2048
+
+# Longer windows for the physics-informed features F3 (2026-11-02).
+# At 2048 samples the spectrum's bins are 5.86 Hz wide, and 6 of the 9 fault
+# lines F3 measures sit within 1.3 bins of a neighbouring line (e.g. 2xBSF is
+# 3.9 Hz from the outer-race sideband BPFO + 1x), so they cannot be told
+# apart. 8192 samples (0.68 s) gives 1.46 Hz bins, which separates all but
+# one pair, at the cost of 4x fewer windows (14 per 10-second recording).
+# See src/check_physics_features.py and docs/RESULTS.md.
+F3_WINDOW_LENGTH_SAMPLES = 8192
+
+# ---------------------------------------------------------------------------
 # Motor load (horsepower) -> nominal shaft speed (rpm).
 # Used only when a file does not store its own measured RPM.
 # ---------------------------------------------------------------------------
