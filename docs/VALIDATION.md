@@ -1,4 +1,4 @@
-# Validation: version 4 (2026-11-02, all 40 files)
+# Validation: version 4.1 (2026-11-02, all 40 files)
 
 This document holds the evidence that each step of the project does what it
 claims. Every number here comes from a script in `src/` and is checked by a
@@ -13,6 +13,8 @@ test in `tests/`.
   1.3). The rig-wide peaks in section 4.1 are now explained.
 - v4: the three train/test protocols, the generic-feature baseline and the
   leakage measurement (section 5).
+- v4.1: the result files are now `results_all_*` (they include every feature
+  set). The physics-feature results are in `docs/RESULTS.md`.
 
 Version 2 covered all 40 files, settled the two normal-file questions and
 added the quarter-order sampling-rate test. Version 2.1 added the 5 kHz
@@ -538,7 +540,9 @@ Consequences for reporting:
 Sources: `src/segment.py`, `src/splits.py`, `src/features.py` and
 `src/run_experiments.py`, tested in `tests/test_segment.py`,
 `test_splits.py`, `test_features.py` and `test_run_experiments.py`.
-Results are in `results/results_f1*.csv` and `results/confusion_matrices_f1.csv`.
+Results are in `results/results_f1.csv` (summary) and in the `results/results_all_*.csv`
+and `results/confusion_matrices_all.csv` files (rows with feature set F1, window 2048).
+The physics-feature results that build on this section are in `docs/RESULTS.md`.
 
 ### 5.1 Setup (fixed before any result was seen)
 
@@ -668,7 +672,7 @@ What this shows:
    tested, not from the random seed. With only three faulty bearings per
    fault type, that uncertainty cannot be reduced with this dataset.
 
-Confusion matrices: `results/confusion_matrices_f1.csv` holds every
+Confusion matrices: `results/confusion_matrices_all.csv` holds every
 protocol and model, with counts summed over seeds and folds. The figures
 below show the model with the highest mean macro-F1 in each protocol. That
 model was picked on test scores, for display only, so its numbers are not
@@ -722,4 +726,5 @@ an unbiased estimate; the table above reports all three models.
 | Read Smith & Randall (2015) in full | to do |
 | Train/test protocols A, B, C | **done** (section 5); B shares bearings, and C shares the healthy bearing |
 | Generic-feature baseline (F1) | **done**: macro-F1 0.99 (A) → 0.97 (B) → 0.46-0.50 (C) |
-| Physics-informed features under protocol C | next step. Inner race (0.00-0.09 under C with tree models) is the clearest test case |
+| Physics-informed features under protocol C | **done** (`docs/RESULTS.md`). F3 alone is no better than generic features. F1+F3 is best (0.73) and fixes inner race 0.007/0.021 and outer race 0.007; ball and outer race 0.014 stay unsolved |
+| Inner race 0.014 called "ball" under C even with F3 | consistent with ball 0.021's inner-race-like envelope; not proven (`docs/RESULTS.md`) |

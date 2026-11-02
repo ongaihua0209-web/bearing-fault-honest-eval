@@ -1,0 +1,10 @@
+line,hz,nearest,nearest_hz,gap_hz,gap_bins_2048,separated_2048,gap_bins_8192,separated_8192,gap_bins_16384,separated_16384
+3xbpfo,310.08,2xbpfi,312.28,2.19,0.37,False,1.5,False,2.99,True
+2xbpfi,312.28,3xbpfo,310.08,2.19,0.37,False,1.5,False,2.99,True
+1x2xbsf,135.91,BPFO+1x,132.19,3.71,0.63,False,2.53,True,5.07,True
+3x2xbsf,407.72,14x shaft,403.67,4.05,0.69,False,2.77,True,5.53,True
+2xbpfo,206.72,7x shaft,201.83,4.89,0.83,False,3.34,True,6.68,True
+3xbpfi,468.42,16x shaft,461.33,7.08,1.21,False,4.84,True,9.67,True
+1xbpfi,156.14,5x shaft,144.17,11.97,2.04,True,8.17,True,16.35,True
+1xbpfo,103.36,4x shaft,115.33,11.97,2.04,True,8.17,True,16.35,True
+2x2xbsf,271.81,9x shaft,259.5,12.31,2.1,True,8.4,True,16.81,True

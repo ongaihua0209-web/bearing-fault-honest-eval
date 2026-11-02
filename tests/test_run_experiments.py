@@ -63,6 +63,38 @@ class TestModelsAndScores(unittest.TestCase):
         self.assertEqual(s["f1_ball"], 2 / 3)
 
 
+class TestFeaturesForSplit(unittest.TestCase):
+
+    def fake_table(self):
+        from src import features
+        n, n_bands = 10, len(features.F3_BANDS)
+        kurtosis = np.zeros((n, n_bands))
+        kurtosis[:6, 1] = 4.0                 # training rows prefer band 1
+        kurtosis[6:, 5] = 40.0                # test rows prefer band 5
+        f3_by_band = np.stack([np.full((n, 9), float(b)) for b in range(n_bands)])
+        return {"F1": np.ones((n, 7)), "F2": np.ones((n, 16)),
+                "f3_kurtosis": kurtosis, "f3_by_band": f3_by_band}
+
+    def test_f3_band_comes_from_training_rows_only(self):
+        X, names, band = rx.features_for_split("F3", self.fake_table(), np.arange(6))
+        self.assertEqual(band, 1)
+        self.assertTrue(np.all(X == 1.0))      # the band-1 slice
+        self.assertEqual(len(names), 9)
+
+    def test_combined_set_is_f1_then_f3(self):
+        X, names, band = rx.features_for_split("F1+F3", self.fake_table(), np.arange(6))
+        self.assertEqual(X.shape, (10, 16))
+        self.assertEqual(names[:7], ["rms", "peak", "peak_to_peak", "crest_factor",
+                                     "kurtosis", "skewness", "std"])
+
+    def test_importances_sum_to_one(self):
+        X_train, y_train = fake_data()
+        for name in rx.MODEL_NAMES:
+            with self.subTest(model=name):
+                pipeline, _ = rx.train_and_test(name, 0, X_train, y_train, X_train, y_train)
+                self.assertAlmostEqual(rx.importance(pipeline).sum(), 1.0)
+
+
 class TestSummary(unittest.TestCase):
 
     def test_protocol_c_averages_folds_before_seeds(self):

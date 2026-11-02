@@ -140,15 +140,18 @@ bearing-fault-honest-eval/
 │   ├── check_fault_signatures.py envelope spectrum: does each file show
 │   │                             its labelled fault frequency?             [done]
 │   ├── segment.py                2048-sample non-overlapping windows       [done]
-│   ├── features.py               feature set F1: 7 generic statistics      [done]
+│   ├── features.py               F1 generic, F2 spectral (0-4.8 kHz),
+│   │                             F3 physics (envelope, 8192 samples)     [done]
+│   ├── check_physics_features.py resolution check, F3 sanity, envelope plot [done]
 │   ├── splits.py                 protocols A random, B load, C fault size  [done]
-│   ├── run_experiments.py        3 models x 3 protocols x 5 seeds          [done]
-│   └── features_physics.py       envelope energy at BPFO/BPFI/BSF/2xBSF    [planned]
-├── tests/                        one test file per src module              [done for 10 modules]
+│   └── run_experiments.py        6 feature sets x 3 protocols x 3 models
+│                                 x 5 seeds                                 [done]
+├── tests/                        one test file per src module              [done for 11 modules]
 ├── results/                      generated tables and figures              [done]
 └── docs/
-    ├── VALIDATION.md             evidence that each step is correct        [done, v4]
-    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v4]
+    ├── VALIDATION.md             evidence that each step is correct        [done, v4.1]
+    ├── RESULTS.md                answers to the research questions         [done]
+    └── HOW_IT_WORKS.md           plain-English guide to every file         [done, v5]
 ```
 
 ### Approach
@@ -166,11 +169,28 @@ seeds 0-4, always also reported per class and per fault size.
    bearings are unseen. The healthy class holds out one load per fold
    (98, 99, 100), so it **still shares its single bearing**. F1 baseline:
    0.46-0.50. This is the honest benchmark.
-4. **Physics-informed features** [planned], compared with F1 under B and C.
-   Consider band energy around BSF and 2×BSF, not only sharp peaks
-   (docs/VALIDATION.md 4.2).
+4. **Feature sets** [done].
+   - **F1:** generic statistics.
+   - **F2:** 16 band energies over **0-4.8 kHz**. The brief asked for 0-6
+     kHz; the 0-4.8 kHz rule takes precedence.
+   - **F3:** physics-informed. Envelope line levels at 1-3× of BPFO, BPFI
+     and 2×BSF, with the band chosen from training data only and
+     **8192-sample windows**, because 2048 samples cannot separate the
+     lines.
+   - **F1+F3:** both together.
+   - **Controls:** F1 and F2 on 8192-sample windows.
 
-Results: docs/VALIDATION.md section 5 and `results/results_f1*.csv`.
+   Result under C:
+   - F3 alone is no better than generic features (0.36-0.53);
+   - F1+F3 is best (gradient boosting 0.73), fixing inner race 0.007/0.021
+     and outer race 0.007;
+   - ball and outer race 0.014 stay unsolved.
+
+   Ideas not yet tried: band energy around BSF and 2×BSF, to catch broad
+   humps (docs/VALIDATION.md 4.2).
+
+Results: `docs/RESULTS.md` (research questions), docs/VALIDATION.md
+section 5, and `results/results_all*.csv`.
 
 ## How to run
 
@@ -183,6 +203,7 @@ python -m src.load_data              # manifest + data-quality report
 python -m src.check_sampling_rate    # sampling-rate check + plots
 python -m src.check_band_edge        # 5 kHz low-pass check + plot
 python -m src.check_fault_signatures # envelope label check + plot
-python -m src.run_experiments        # leakage experiment, about 2 minutes
+python -m src.check_physics_features # F3 resolution + sanity checks, plot
+python -m src.run_experiments        # full grid, about 9 minutes
 python -m unittest discover -s tests -v
 ```

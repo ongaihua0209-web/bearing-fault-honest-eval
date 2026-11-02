@@ -40,12 +40,13 @@ def cut_into_windows(signal, length=config.WINDOW_LENGTH_SAMPLES):
     return np.asarray(signal[:n_windows * length]).reshape(n_windows, length)
 
 
-def make_windows(raw_dir=config.RAW_DATA_DIR):
+def make_windows(length=config.WINDOW_LENGTH_SAMPLES, raw_dir=config.RAW_DATA_DIR):
     """
-    Cut every available recording into windows.
+    Cut every available recording into windows of `length` samples
+    (2048 by default; the physics features F3 use 8192, see config.py).
 
     Returns (windows, meta):
-      windows: array with one row per window (n_windows x 2048)
+      windows: array with one row per window (n_windows x length)
       meta:    table with one row per window, in the same order, saying
                where it came from (file_number, cwru_name, fault_location,
                fault_size_in, load_hp, rpm, window_in_file).
@@ -56,7 +57,7 @@ def make_windows(raw_dir=config.RAW_DATA_DIR):
         if not load_data.mat_path(number, raw_dir).exists():
             continue
         signal, rpm, _ = load_data.load_signal(number, raw_dir)
-        windows = cut_into_windows(signal)
+        windows = cut_into_windows(signal, length)
         all_windows.append(windows)
         for i in range(len(windows)):
             rows.append({**info, "rpm": rpm, "window_in_file": i})
@@ -74,6 +75,11 @@ def main():
     print("\nWindows per recording (min / max):",
           meta.groupby("file_number").size().min(), "/",
           meta.groupby("file_number").size().max())
+
+    long_windows, long_meta = make_windows(config.F3_WINDOW_LENGTH_SAMPLES)
+    print(f"\nFor feature set F3: {len(long_windows)} windows of "
+          f"{config.F3_WINDOW_LENGTH_SAMPLES} samples")
+    print(long_meta["fault_location"].value_counts().to_string())
 
 
 if __name__ == "__main__":

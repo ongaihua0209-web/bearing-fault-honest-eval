@@ -3,6 +3,78 @@
 Newest session first. Each entry says what changed, what was found, and
 what comes next.
 
+## Session 5 (2026-11-02): spectral and physics-informed features, full grid
+
+### Added / changed
+- `src/features.py`:
+  - **F2:** log energy in 16 equal 300 Hz bands from **0 to 4.8 kHz**. The
+    brief said 0-6 kHz; the project's 0-4.8 kHz rule takes precedence
+    (VALIDATION 3.5).
+  - **F3:** envelope analysis.
+    - **Band:** chosen from **training windows only**, as the band with the
+      highest median kurtosis among nine 1.2 kHz bands.
+    - **Measurement:** the Hilbert envelope spectrum, read at 1×, 2× and 3×
+      of BPFO, BPFI and 2×BSF from each recording's own RPM, within ±1% or
+      one bin, divided by the median over 10-600 Hz, as log10.
+  - **F1+F3:** both sets combined.
+- `src/config.py`: `F3_WINDOW_LENGTH_SAMPLES = 8192`.
+- `src/segment.py`: `make_windows(length)`.
+- `src/check_physics_features.py` (new):
+  - resolution table. At 2048 samples (5.86 Hz bins) only 3 of 9 lines are
+    ≥ 2 bins from a neighbour; at 8192 samples, 7 of 9;
+  - F3 sanity check;
+  - envelope-spectrum figure.
+- `src/run_experiments.py`: the full grid. That is 6 feature-set
+  configurations (F1, F2, F3, F1+F3, plus F1 and F2 on 8192-sample windows
+  as controls) × 3 protocols × 3 models × 5 seeds.
+  - New outputs: `results_all*.csv`, feature importances, the chosen F3
+    bands, a leakage-gap chart and an importance chart.
+  - The F1 (2048) results reproduce session 4 exactly. It runs in 8 min 44 s.
+- `docs/RESULTS.md` (new): answers to RQ1-RQ3.
+- `docs/HOW_IT_WORKS.md` v5: envelope analysis explained like a mechanic
+  listening to a bearing. `docs/VALIDATION.md` v4.1 and `CLAUDE.md`
+  updated.
+- Tests: 119 (17 new), all passing.
+  - **F2:** band layout, and a tone landing in the right band.
+  - **F3:** synthetic impacts at BPFO, BPFI and 2×BSF; the band chosen
+    from training rows only; the median normalisation.
+  - **Resolution:** the 3-of-9 and 7-of-9 facts.
+  - **Real-data sanity check.**
+
+### Found
+- **RQ1, leakage:** protocol A minus protocol C ranges from 0.25 to 0.56
+  macro-F1 across all 18 feature-set/model combinations. Random forest on
+  F1: 0.99 → 0.46.
+- **RQ2, physics features:** only partly better.
+  - F3 alone scores 0.36-0.53 under C, no better than the generic controls
+    on the same windows (F1 0.41-0.56, F2 0.51-0.65).
+  - **F1+F3 is best: 0.73 (gradient boosting) and 0.70 (random forest).**
+    Inner race 0.007/0.021 and outer race 0.007 go from 0-10% to 100%
+    correct.
+  - Ball and outer race 0.014 stay unsolved.
+  - With only 3 folds (0.36-1.00), the lead over F2 (0.65) is not secure.
+- **RQ3, simple models:** logistic regression is best with generic
+  features but cannot use F3 (0.36). Gradient boosting is needed for the
+  0.73.
+- **The sanity check passes:** BPFI beats BPFO in 100% of inner-race
+  windows; BPFO beats BPFI in 84% of outer-race windows (100% / 52% / 100%
+  for 0.007 / 0.014 / 0.021).
+- **The best model leans on physics:** `bpfi_1x` is its top feature (0.26),
+  and F3 carries 0.46 of the importance. The 2×BSF features carry almost
+  none.
+- **Inner race 0.014 is called "ball" in every window under C, even with
+  F3.** That is consistent with ball 0.021's inner-race-like envelope
+  setting the "ball" range in training.
+- **F2 scores 1.00 under protocol A.** Band energies fingerprint
+  recordings, which makes F2 the leakiest feature set.
+
+### Next steps
+1. Write `README.md` around the leakage-gap chart and RESULTS.md.
+2. Try band energy around BSF and 2×BSF to catch the broad ball humps.
+3. Consider a protocol without the ambiguous groups (ball, outer race
+   0.014) as a sensitivity analysis. The labels stay unchanged.
+4. Read Smith & Randall (2015) in full.
+
 ## Session 4 (2026-11-02): split protocols, generic-feature baseline, leakage measured
 
 ### Added
